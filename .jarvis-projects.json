@@ -1,0 +1,14 @@
+{
+  "jarvis": {
+    "directory": ".",
+    "commands": {
+      "tests": ["{python}", "-m", "unittest", "discover", "-s", "tests", "-v"]
+    }
+  },
+  "sentrix": {
+    "directory": "D:/Projects/sentrixv1",
+    "commands": {
+      "tests": ["D:/Projects/sentrixv1/.venv/Scripts/python.exe", "-m", "unittest", "discover", "-s", "tests", "-v"]
+    }
+  }
+}

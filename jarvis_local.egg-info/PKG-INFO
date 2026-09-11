@@ -1,0 +1,26 @@
+Metadata-Version: 2.4
+Name: jarvis-local
+Version: 1.4.0
+Summary: A local-first terminal assistant powered by Ollama.
+Requires-Python: >=3.10
+Provides-Extra: voice
+Requires-Dist: faster-whisper>=1.1; extra == "voice"
+Requires-Dist: numpy>=1.26; extra == "voice"
+Requires-Dist: pynput>=1.7; extra == "voice"
+Requires-Dist: sounddevice>=0.5; extra == "voice"
+Provides-Extra: voice-output
+Requires-Dist: numpy>=1.26; extra == "voice-output"
+Requires-Dist: piper-tts>=1.2; extra == "voice-output"
+Requires-Dist: sounddevice>=0.5; extra == "voice-output"
+Provides-Extra: wake-word
+Requires-Dist: numpy>=1.26; extra == "wake-word"
+Requires-Dist: openwakeword>=0.6; extra == "wake-word"
+Requires-Dist: sounddevice>=0.5; extra == "wake-word"
+Provides-Extra: dashboard
+Requires-Dist: fastapi>=0.115; extra == "dashboard"
+Requires-Dist: uvicorn>=0.30; extra == "dashboard"
+Provides-Extra: rag
+Requires-Dist: chromadb>=0.5; extra == "rag"
+Requires-Dist: pypdf>=5.0; extra == "rag"
+Requires-Dist: python-docx>=1.1; extra == "rag"
+Requires-Dist: sentence-transformers>=3.0; extra == "rag"

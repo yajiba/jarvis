@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JARVIS Neural Interface</title>
+<style>
+:root{color-scheme:dark;--cyan:#cbb9ff;--muted:#9693a5;--line:#ffffff12;--green:#a1d9bf;font-family:"Segoe UI",sans-serif;color:#eeedf4;background:#101015}*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 22% 48%,#29223888,transparent 52%),#101015;min-height:100svh}main{max-width:1240px;margin:auto;padding:32px 40px;min-height:100svh;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto 1fr auto auto auto;column-gap:64px}header{grid-column:1/-1;display:flex;align-items:center;gap:18px;padding-bottom:26px;border-bottom:1px solid var(--line)}h1{font-size:20px;font-weight:600;letter-spacing:.12em;margin:0}.eyebrow{font-size:11px;color:var(--muted);margin:0;letter-spacing:.04em}#clock{margin-left:auto;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}.face-panel{grid-column:1;grid-row:2/6;display:flex;flex-direction:column;justify-content:center;align-items:center;min-height:520px}.face-panel::before{content:"A little presence. A lot of possibility.";color:var(--muted);font-size:12px;letter-spacing:.03em;margin-bottom:45px}.face-panel::after{content:"JARVIS";font-size:11px;letter-spacing:.4em;color:#797486;margin-top:52px}.face-stage{display:grid;place-items:center;position:relative;width:min(360px,75vw);aspect-ratio:1;cursor:pointer}.aura-ring{position:absolute;border-radius:50%;pointer-events:none}.one{inset:0;border:1px solid #bfa4ff12}.two{inset:8%;background:radial-gradient(circle,#b18cef14,transparent 70%)}.three{display:none}.companion-face{width:68%;height:60%;border:1px solid #c9b0ff70;border-radius:47% 47% 44% 44%;background:linear-gradient(145deg,#b9a0ed20,#b9a0ed05);box-shadow:0 0 70px #b89aff10,inset 0 0 38px #c8adff08;position:relative;animation:float 6s ease-in-out infinite}.eyes{position:absolute;top:34%;left:20%;right:20%;display:flex;justify-content:space-between}.eye{width:32px;height:19px;border-top:3px solid #e0cfff;border-radius:50%;position:relative;filter:drop-shadow(0 0 7px #d0b5ff);animation:blink 7s infinite}.eye::after{content:"";position:absolute;width:5px;height:10px;background:#e5d4ff;border-radius:50%;left:13px;top:2px}.eye:first-child{transform:rotate(-8deg)}.eye:last-child{transform:rotate(8deg)}.cheeks{position:absolute;top:52%;left:15%;right:15%;display:flex;justify-content:space-between}.cheeks::before,.cheeks::after{content:"";width:30px;height:10px;background:#e49bc929;border-radius:50%;filter:blur(5px)}.orb{position:absolute;left:41%;top:63%;width:18%;height:14px;border-bottom:2px solid #e3cafa;border-radius:0 0 50% 50%}.orb.speaking{animation:talk .25s infinite alternate}.processing .companion-face{animation:float 2s infinite;box-shadow:0 0 65px #b89aff30}.listening .companion-face{border-color:#a1d9bf;box-shadow:0 0 50px #a1d9bf20}.face-status{position:absolute;bottom:-16px;font-size:12px;color:var(--muted)}.waveform{display:none}.console{align-self:stretch;grid-column:2;grid-row:2;background:#1b1a22;border:1px solid var(--line);border-radius:22px 22px 0 0;margin-top:36px;padding:24px 24px 8px;min-height:300px}.console-heading{display:flex;justify-content:space-between;font-size:14px;font-weight:500;padding-bottom:20px;border-bottom:1px solid var(--line)}#message-count{font-size:11px;color:var(--muted)}.transcript{height:clamp(220px,37vh,440px);overflow:auto;padding-top:22px;scrollbar-width:thin;scrollbar-color:#4a425b transparent}.message{margin:0 0 22px;max-width:95%}.message-label{color:var(--muted);font-size:10px;margin-bottom:7px;letter-spacing:.04em}.message-text{font-size:14px;line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere}.user{margin-left:20%;padding:12px 16px;background:#c8b0ff12;border-radius:14px 14px 3px 14px}.user .message-label{color:#cbb9ff}.pending{color:#cbb9ff;font-size:13px;padding:12px 0;animation:fade 1.5s infinite}.error .message-text{color:#edacb5}form{grid-column:2;grid-row:3;display:flex;gap:8px;background:#1b1a22;border:1px solid var(--line);border-top:0;border-radius:0 0 22px 22px;padding:16px;margin:0}input,button{font:13px "Segoe UI",sans-serif;border:0;border-radius:10px;min-height:44px}input{flex:1;width:0;background:#111116;padding:0 14px;color:#eeedf4;outline:none}input::placeholder{color:#827b90}button{background:#cbb9ff;color:#251e33;padding:0 16px;cursor:pointer;font-weight:600}button:hover{filter:brightness(1.1)}button:disabled{opacity:.45;cursor:wait}.mic{background:#ffffff08;color:#d5cce5}button:focus-visible,input:focus-visible{outline:2px solid #cbb9ff;outline-offset:3px}.metrics{grid-column:2;grid-row:4;display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:22px 4px}.metric-label{font-size:9px;color:var(--muted);margin-bottom:8px;letter-spacing:.04em}.metric-value{font-size:14px;color:#c7c1d1}.metric-bar{display:none}#voice-hint{grid-column:2;grid-row:5;color:var(--muted);font-size:11px;text-align:center;margin:0 0 12px}footer{grid-column:1/-1;display:flex;justify-content:space-between;border-top:1px solid var(--line);padding-top:18px;margin-top:24px;font-size:10px;color:var(--muted)}.system-state{color:var(--green)}.system-state[data-state="offline"]{color:#edacb5}@keyframes float{50%{transform:translateY(-8px)}}@keyframes blink{0%,44%,48%,100%{opacity:1}46%{opacity:.15}}@keyframes talk{to{height:20px;transform:scaleX(.8)}}@keyframes fade{50%{opacity:.45}}@media(max-width:800px){main{padding:22px;display:flex;flex-direction:column}header{gap:12px}.eyebrow{display:none}.face-panel{min-height:310px}.face-panel::before{display:none}.face-panel::after{display:none}.face-stage{width:250px}.console{margin-top:20px;min-height:230px}.transcript{height:230px}.metrics{gap:8px}.metric-label{font-size:8px}footer{margin-top:16px}}@media(prefers-reduced-motion:reduce){*{animation:none!important}}
+
+/* Soft glass companion */
+body { background: radial-gradient(ellipse at 24% 45%, #32254266, transparent 48%), radial-gradient(ellipse at 90% 0%, #22253540, transparent 40%), #101015; }
+main { max-width: 1400px; column-gap: 76px; padding: 30px 48px; }
+header { padding-bottom: 24px; }
+h1 { font-size: 18px; letter-spacing: .18em; }
+.face-panel::before { content: "HERE WITH YOU"; font-size: 9px; letter-spacing: .28em; color: #b7a4c8; margin-bottom: 30px; }
+.face-panel::after { content: "A familiar voice. A thoughtful companion."; letter-spacing: .02em; font-size: 12px; color: #898294; margin-top: 60px; }
+.face-stage { width: min(430px, 78vw); isolation: isolate; }
+.face-stage::before { content: ""; position: absolute; inset: 8%; border-radius: 50%; background: radial-gradient(ellipse, #c292ff1a, transparent 68%); filter: blur(22px); }
+.one { inset: 0; border: 1px solid #cdb4ed0b; }
+.two { inset: 7%; border: 1px solid #cdb4ed10; background: none; }
+.three { display: block; inset: 7%; border: 1px solid transparent; border-top-color: #dabaff38; transform: rotate(-35deg); }
+.companion-face { width: 68%; height: 62%; border-radius: 46% 46% 44% 44% / 43% 43% 53% 53%; border: 1px solid #e4c8ff65; background: radial-gradient(ellipse at 35% 15%, #efd6ff24, transparent 50%), radial-gradient(ellipse at 65% 85%, #775ab32b, transparent 60%), linear-gradient(150deg, #493957dd, #231f32ee 65%); box-shadow: inset 0 2px 3px #f7e5ff40, inset 0 -5px 18px #b588df0d, 0 26px 60px #0005, 0 0 70px #bd8bff16; transition: border-color .4s, box-shadow .4s; }
+.companion-face::before { content: ""; position: absolute; inset: 7px; border: 1px solid #f4dfff0c; border-radius: inherit; pointer-events: none; }
+.companion-face::after { content: ""; position: absolute; top: 9%; left: 23%; width: 34%; height: 12%; border-top: 2px solid #f4e1ff20; border-radius: 50%; transform: rotate(-14deg); filter: blur(1px); }
+.eyes { top: 36%; left: 19%; right: 19%; align-items: center; }
+.eye { width: 47px; height: 39px; border: 0; border-radius: 46% 46% 48% 48%; background: radial-gradient(ellipse at 50% 38%, #ffefff 0%, #e4caff 50%, #b98dde 100%); box-shadow: 0 0 18px #dec0ff65, 0 0 40px #c9a7ff18; filter: none; animation: eye-blink 6.8s infinite; transform-origin: center; }
+.eye:first-child, .eye:last-child { transform: none; }
+.eye::before { content: ""; position: absolute; width: 19px; height: 27px; left: 15px; top: 7px; border-radius: 50%; background: linear-gradient(#4c345e, #88609f); box-shadow: inset 0 1px 4px #241832; animation: eye-glance 12s ease-in-out infinite; }
+.eye::after { width: 7px; height: 9px; left: 19px; top: 10px; background: #fff9ff; box-shadow: 7px 12px 0 -2px #e6d3ff; animation: eye-glance 12s ease-in-out infinite; }
+.lash { position: absolute; width: 9px; height: 9px; top: -3px; border-bottom: 2px solid #e8ceff; }
+.eye:first-child .lash { left: -5px; transform: rotate(28deg); }
+.eye:last-child .lash { right: -5px; transform: rotate(-28deg); }
+.brows { position: absolute; top: 27%; left: 21%; right: 21%; display: flex; justify-content: space-between; }
+.brows::before, .brows::after { content: ""; width: 33px; height: 9px; border-top: 2px solid #e0bdff80; border-radius: 50%; }
+.brows::before { transform: rotate(-8deg); }.brows::after { transform: rotate(8deg); }
+.cheeks { top: 57%; left: 15%; right: 15%; }
+.cheeks::before, .cheeks::after { width: 39px; height: 15px; background: #ed9fc83d; filter: blur(8px); }
+.orb { left: 42%; top: 66%; width: 16%; height: 15px; border-bottom: 2px solid #f4d6ec; border-radius: 0 0 55% 55%; filter: drop-shadow(0 0 5px #efbfed40); transition: height .2s; }
+.orb.speaking { animation: mouth-speak .32s ease-in-out infinite alternate; background: #c088b633; border: 1px solid #f0c7e0; border-radius: 45%; }
+.listening .companion-face { border-color: #b9e5d0; box-shadow: inset 0 2px 3px #e3fff540, 0 0 65px #a1d9bf20, 0 26px 60px #0005; }
+.listening .brows { transform: translateY(-4px); }.listening .eye { background: radial-gradient(ellipse, #f0fff9, #aadac9); }
+.processing .three { animation: thinking-ring 3s linear infinite; }
+.processing .eye::before, .processing .eye::after { animation: none; transform: translate(5px,-3px); }
+.face-status { bottom: -14px; padding: 8px 15px; border-radius: 30px; border: 1px solid #ffffff09; background: #ffffff03; color: #bfb4ca; font-size: 11px; }
+.face-status::before { content: ""; display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: #addec8; margin-right: 8px; }
+.console { background: linear-gradient(145deg,#222029,#19181f); border-color: #ffffff0d; box-shadow: 0 20px 60px #0002; padding: 26px 28px 8px; border-radius: 24px 24px 0 0; }
+.console-heading { font-size: 14px; border-color: #ffffff0a; }
+#message-count { background: #ffffff06; padding: 3px 8px; border-radius: 7px; }
+.message { margin-bottom: 26px; }.message-label { font-size: 9px; color: #91889f; margin-bottom: 8px; }.message-text { color: #e2dce9; font-size: 14px; line-height: 1.85; }
+.user { background: #bfa0ed12; border: 1px solid #d6b5ff0a; }.user .message-text { color: #ece1fa; }
+form { background: #19181f; padding: 16px 20px 20px; border-color: #ffffff0d; border-radius: 0 0 24px 24px; }
+input { min-height: 48px; background: #101015; border: 1px solid #ffffff05; border-radius: 13px; }
+button { border-radius: 13px; background: linear-gradient(145deg,#e0caff,#bfa7ef); }.mic { background: #ffffff05; }
+.metrics { padding-top: 24px; }.metric { padding-left: 12px; border-left: 1px solid #ffffff0b; }.metric-value { font-size: 13px; }.metric-label { font-size: 8px; letter-spacing: .06em; }
+@keyframes eye-blink { 0%,43%,47%,100% { scale: 1 1; } 45% { scale: 1 .08; } }
+@keyframes eye-glance { 0%,30%,55%,100% { translate: 0 0; } 35%,48% { translate: 3px 0; } 70%,80% { translate: -2px 1px; } }
+@keyframes mouth-speak { 0% { height: 5px; transform: scaleX(.85); } 100% { height: 17px; transform: scaleX(1); } }
+@keyframes thinking-ring { to { transform: rotate(325deg); } }
+@media(max-width:800px) { main { padding: 22px; }.face-panel { min-height: 350px; }.face-panel::before { display: none; }.face-stage { width: 290px; }.face-panel::after { display: none; }.eye { width: 34px; height: 29px; }.eye::before { left: 10px; top: 5px; width: 15px; height: 21px; }.eye::after { left: 13px; top: 7px; width: 5px; height: 7px; }.brows::before,.brows::after { width: 24px; }.console { padding: 22px 20px 8px; }.metric { padding-left: 7px; } }
+@media(prefers-reduced-motion:reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+/* Minimal voice circle */
+.companion-face {
+  width: 58%; height: auto; aspect-ratio: 1; border-radius: 50%;
+  border: 1px solid #dcc8ff90;
+  background: radial-gradient(circle at 42% 35%, #cbb6ee18, #8e6dbf0c 60%, #17131f);
+  box-shadow: 0 0 38px #bb91f522, inset 0 0 35px #bc95ec12;
+  animation: float 6s ease-in-out infinite;
+}
+.companion-face::before, .companion-face::after { display: none; }
+.circle-core { position: absolute; inset: 0; border-radius: 50%; transition: box-shadow .3s; }
+.circle-core.speaking { animation: circle-speech .65s ease-in-out infinite alternate; }
+@keyframes circle-speech { to { box-shadow: 0 0 42px #cbb6ee55, inset 0 0 30px #cbb6ee30; } }
+@media(prefers-reduced-motion:reduce) { .circle-core.speaking { animation: none; } }
+
+/* Strong playback feedback, active only while audio is playing. */
+.face-panel.speaking .companion-face {
+  border: 2px solid #f0dcff;
+  background: radial-gradient(circle, #e7c7ff30, #ac77e530 60%, #9260c530);
+  box-shadow: 0 0 26px #d4aaff90, 0 0 85px #b27aef60, inset 0 0 45px #dfbdff40;
+  animation: speaking-breathe .8s ease-in-out infinite alternate;
+}
+.face-panel.speaking .circle-core::before,
+.face-panel.speaking .circle-core::after {
+  content: ""; position: absolute; inset: -3px;
+  border: 2px solid #d9b8ff; border-radius: 50%;
+  animation: voice-ripple 1.8s ease-out infinite;
+}
+.face-panel.speaking .circle-core::after { animation-delay: .9s; }
+.face-panel.speaking .face-status {
+  color: #f0dcff; border-color: #c397ed60; background: #b27aef1c;
+  font-weight: 600; letter-spacing: .08em;
+}
+.face-panel.speaking .face-status::before { background: #e5bfff; box-shadow: 0 0 9px #e5bfff; }
+@keyframes speaking-breathe { from { transform: scale(1); } to { transform: scale(1.08); } }
+@keyframes voice-ripple { from { transform: scale(1); opacity: .65; } to { transform: scale(1.5); opacity: 0; } }
+@media(prefers-reduced-motion:reduce) {
+  .face-panel.speaking .companion-face,
+  .face-panel.speaking .circle-core::before,
+  .face-panel.speaking .circle-core::after { animation: none !important; }
+  .face-panel.speaking .circle-core::before { transform: scale(1.15); opacity: .4; }
+  .face-panel.speaking .circle-core::after { transform: scale(1.3); opacity: .15; }
+}
+</style>
+</head>
+<body>
+<main>
+<header><h1>J.A.R.V.I.S</h1><p class="eyebrow">Your everyday companion</p><div id="clock">00:00:00</div></header>
+<section class="face-panel" id="face-panel" aria-label="JARVIS voice activity">
+<div class="face-stage"><div class="aura-ring one"></div><div class="aura-ring two"></div><div class="aura-ring three"></div><div class="companion-face" role="img" aria-label="Glowing voice circle"><div id="mouth" class="circle-core"></div></div><div class="waveform" id="waveform"></div><div class="face-status" id="face-status" role="status">Connecting</div></div>
+</section>
+<section class="console" aria-label="Conversation"><div class="console-heading"><span>Conversation</span><span id="message-count">0</span></div><div class="transcript" id="transcript" aria-live="polite"><div class="message ai"><div class="message-label">JARVIS</div><div class="message-text">I'm here. What's on your mind?</div></div></div></section>
+<form id="command-form"><input id="command" aria-label="Command" placeholder="Ask me anything..." autocomplete="off"><button type="submit">Send</button><button type="button" class="mic" id="talk-button" aria-label="Activate microphone">Mic</button></form>
+<section class="metrics" aria-label="System telemetry">
+<div class="metric"><div class="metric-label">CPU LOAD</div><div class="metric-value" id="cpu">--</div><div class="metric-bar"><div class="metric-bar-fill" id="cpu-bar"></div></div></div>
+<div class="metric"><div class="metric-label">MEMORY USAGE</div><div class="metric-value" id="ram">--</div><div class="metric-bar"><div class="metric-bar-fill" id="ram-bar"></div></div></div>
+<div class="metric"><div class="metric-label">GPU STATUS</div><div class="metric-value" id="gpu">--</div></div>
+<div class="metric"><div class="metric-label">VOICE ENGINE</div><div class="metric-value" id="voice">--</div></div>
+</section>
+<p id="voice-hint">Type a message, or tap Mic to talk</p>
+<div hidden><span id="task-count">0</span><div id="tasks"></div></div>
+<footer><span id="system-state" class="system-state" role="status">Connecting</span><span id="model">LOCAL SYSTEM</span></footer>
+</main>
+<script>
+    const facePanel = document.querySelector('#face-panel');
+    const transcript = document.querySelector('#transcript');
+    const statusLabel = document.querySelector('#system-state');
+    const faceStatus = document.querySelector('#face-status');
+    const mouth = document.querySelector('#mouth');
+    const waveformContainer = document.querySelector('#waveform');
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition = null;
+    let isListening = false;
+    let isProcessing = false;
+    let messageCount = 0;
+    let refreshPending = false;
+    
+    function getTimeString() {
+      const now = new Date();
+      return now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+    
+    function addMessage(label, text, isUser = false) {
+      messageCount++;
+      const type = isUser ? 'user' : 'ai';
+      const labelText = isUser ? 'YOU' : 'JARVIS';
+      const entry = document.createElement('div');
+      entry.className = 'message ' + type;
+      const heading = document.createElement('div');
+      heading.className = 'message-label';
+      heading.textContent = '[' + getTimeString() + ' / ' + labelText + ']';
+      const content = document.createElement('div');
+      content.className = 'message-text';
+      content.textContent = text;
+      entry.append(heading, content);
+      transcript.appendChild(entry);
+      document.querySelector('#message-count').textContent = messageCount;
+      transcript.scrollTop = transcript.scrollHeight;
+    }
+    
+    function setListening(value) {
+      isListening = value;
+      facePanel.classList.toggle('listening', value);
+      if (!isProcessing) faceStatus.textContent = value ? 'Listening to you' : 'Ready to listen';
+      if (value) createWaveform();
+      else clearWaveform();
+    }
+    
+    function setProcessing() {
+      isProcessing = true;
+      facePanel.classList.remove('listening');
+      facePanel.classList.add('processing');
+      faceStatus.textContent = 'Thinking';
+      mouth.classList.remove('speaking');
+      mouth.classList.add('speaking-active');
+      clearWaveform();
+    }
+    
+    function resetFace() {
+      isProcessing = false;
+      facePanel.classList.remove('listening', 'processing');
+      faceStatus.textContent = 'Ready';
+      mouth.classList.remove('speaking', 'speaking-active');
+      clearWaveform();
+    }
+    
+    function createWaveform() {
+      clearWaveform();
+      for (let i = 0; i < 20; i++) {
+        const bar = document.createElement('div');
+        bar.className = 'wave-bar';
+        bar.style.animationDelay = (i * 0.05) + 's';
+        if (Math.random() > 0.3) bar.classList.add('active');
+        waveformContainer.appendChild(bar);
+      }
+    }
+    
+    function clearWaveform() {
+      waveformContainer.innerHTML = '';
+    }
+    
+    async function refresh() {
+      if (refreshPending) return;
+      refreshPending = true;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      try {
+        
+        const [statusResponse, taskResponse] = await Promise.all([
+          fetch('/status', { signal: controller.signal }),
+          fetch('/tasks', { signal: controller.signal })
+        ]);
+        
+        if (!statusResponse.ok || !taskResponse.ok) {
+          throw new Error('API error');
+        }
+        
+        const status = await statusResponse.json();
+        const tasks = await taskResponse.json();
+        statusLabel.textContent = status.status === 'online' ? 'System online' : 'Offline';
+        statusLabel.dataset.state = status.status;
+        if (!isListening && !isProcessing && !(currentAudio && !currentAudio.paused)) {
+          faceStatus.textContent = status.status === 'online' ? (SpeechRecognition ? 'Ready to listen' : 'No voice support') : 'Disconnected';
+        }
+        document.querySelector('#model').textContent = status.model || '--';
+        
+        // CPU metric with progress bar
+        const cpuValue = status.hardware && status.hardware.cpu && status.hardware.cpu[0] && status.hardware.cpu[0].LoadPercentage;
+        const cpuDisplay = cpuValue == null ? 'Ready' : `${cpuValue}%`;
+        document.querySelector('#cpu').textContent = cpuDisplay;
+        document.querySelector('#cpu-bar').style.width = (cpuValue || 0) + '%';
+        
+        // RAM metric with progress bar
+        const ramPercent = status.hardware && status.hardware.ram_total_bytes 
+          ? Math.round((1 - status.hardware.ram_free_bytes / status.hardware.ram_total_bytes) * 100)
+          : null;
+        const ramDisplay = ramPercent == null ? 'Ready' : `${ramPercent}%`;
+        document.querySelector('#ram').textContent = ramDisplay;
+        document.querySelector('#ram-bar').style.width = (ramPercent || 0) + '%';
+        
+        document.querySelector('#gpu').textContent = status.hardware && status.hardware.gpu_metrics && status.hardware.gpu_metrics.available ? 'Ready' : 'N/A';
+        document.querySelector('#voice').textContent = status.voice_ready ? 'Ready' : 'Check';
+        document.querySelector('#task-count').textContent = tasks.length;
+        document.querySelector('#tasks').innerHTML = tasks.length 
+          ? tasks.map(task => `<div class="task">${task.title}<br><div class="task-time">${task.due_at || 'No due time'}</div></div>`).join('') 
+          : '<div class="task">No open tasks</div>';
+      } catch (error) {
+        console.log('Status check failed:', error.message);
+        statusLabel.textContent = 'Offline';
+        statusLabel.dataset.state = 'offline';
+        faceStatus.textContent = 'Disconnected';
+      } finally {
+        clearTimeout(timeoutId);
+        refreshPending = false;
+      }
+    }
+    
+    let currentAudio = null;
+    let currentAudioUrl = null;
+    let speechRequest = null;
+    async function playPiperReply(text) {
+      if (speechRequest) speechRequest.abort();
+      if (currentAudio) { currentAudio.pause(); currentAudio.remove(); }
+      if (currentAudioUrl) URL.revokeObjectURL(currentAudioUrl);
+      mouth.classList.remove('speaking');
+      const controller = new AbortController();
+      speechRequest = controller;
+      const timeout = setTimeout(() => controller.abort(), 120000);
+      try {
+        const result = await fetch('/speech', {
+          method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({text}), signal: controller.signal
+        });
+        if (!result.ok) {
+          let detail = 'Piper speech is unavailable. Restart the dashboard server after updating.';
+          try { const data = await result.json(); if (typeof data.detail === 'string') detail = data.detail; } catch {}
+          throw new Error(detail);
+        }
+        const blob = await result.blob();
+        if (controller.signal.aborted) return;
+        currentAudioUrl = URL.createObjectURL(blob);
+        const audio = document.createElement('audio');
+        currentAudio = audio;
+        audio.src = currentAudioUrl;
+        audio.controls = false;
+        audio.onplay = () => { mouth.classList.add('speaking'); facePanel.classList.add('speaking'); faceStatus.textContent = 'Speaking'; };
+        audio.onpause = audio.onended = audio.onerror = () => { mouth.classList.remove('speaking'); facePanel.classList.remove('speaking'); if (!isProcessing && !isListening) faceStatus.textContent = 'Ready to listen'; };
+        try { await audio.play(); }
+        catch { document.querySelector('#voice-hint').textContent = 'Automatic voice playback was blocked. Allow sound for this site in your browser.'; }
+      } catch (error) {
+        if (controller !== speechRequest) return;
+        addMessage('JARVIS', error.name === 'AbortError' ? 'Voice generation timed out. Your text reply is still available.' : error.message);
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
+
+    async function sendVoiceMessage(message) {
+      if (!message.trim() || isProcessing) return;
+      addMessage('YOU', message, true);
+      const pending = document.createElement('div');
+      pending.className = 'pending';
+      pending.setAttribute('role', 'status');
+      pending.textContent = 'JARVIS is thinking?';
+      transcript.appendChild(pending);
+      transcript.scrollTop = transcript.scrollHeight;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 120000);
+      const slow = setTimeout(() => { pending.textContent = 'Still working ? the local model may be warming up?'; }, 10000);
+      const send = document.querySelector('#command-form button[type="submit"]');
+      send.disabled = true;
+      try {
+        setProcessing();
+        const result = await fetch('/chat', {
+          method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({message}), signal: controller.signal
+        });
+        const raw = await result.text();
+        let data;
+        try { data = JSON.parse(raw); } catch { throw new Error('The chat service returned an unreadable reply (HTTP ' + result.status + ').'); }
+        if (!result.ok) throw new Error(typeof data.detail === 'string' ? data.detail : 'Chat request failed (HTTP ' + result.status + ').');
+        if (!data.response || !data.response.trim()) throw new Error('The model returned an empty reply. Please try again.');
+        addMessage('JARVIS', data.response);
+        playPiperReply(data.response);
+
+      } catch (error) {
+        addMessage('JARVIS', error.name === 'AbortError'
+          ? 'The reply took longer than two minutes. Check Ollama before trying again.'
+          : (error.message || 'Cannot reach the chat service.'));
+        transcript.lastElementChild.classList.add('error');
+      } finally {
+        clearTimeout(timeout); clearTimeout(slow); pending.remove();
+        send.disabled = false;
+        resetFace(); refresh();
+      }
+    }
+
+    if (SpeechRecognition) {
+      recognition = new SpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      
+      recognition.onstart = () => setListening(true);
+      recognition.onend = () => setListening(false);
+      recognition.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        addMessage('JARVIS', `Voice error: ${event.error}`, false);
+        setListening(false);
+      };
+      recognition.onresult = (event) => {
+        const transcript_text = event.results[0][0].transcript;
+        setListening(false);
+        sendVoiceMessage(transcript_text);
+      };
+      
+      // Make face clickable for voice
+      const faceStage = document.querySelector('.face-stage');
+      faceStage.style.cursor = 'pointer';
+      faceStage.addEventListener('click', () => {
+        if (!isListening && !isProcessing) {
+          recognition.start();
+        }
+      });
+      document.querySelector('#talk-button').addEventListener('click', () => {
+        if (!isListening && !isProcessing) recognition.start();
+      });
+    } else {
+      faceStatus.textContent = 'No voice support';
+      document.querySelector('#talk-button').disabled = true;
+      document.querySelector('#voice-hint').textContent = 'Browser voice input is unavailable. Use the terminal voice assistant.';
+    }
+    
+    // Fast initial connection with aggressive retries
+    let connectionAttempts = 0;
+    async function tryConnect() {
+      connectionAttempts++;
+      console.log(`Connection attempt ${connectionAttempts}...`);
+      await refresh();
+      
+      const isOnline = statusLabel.textContent === 'System online';
+      if (!isOnline && connectionAttempts < 15) {
+        // Retry quickly: 500ms, then 600ms, then 800ms
+        const delay = connectionAttempts < 5 ? 500 : connectionAttempts < 10 ? 600 : 800;
+        setTimeout(tryConnect, delay);
+      } else if (isOnline) {
+        console.log('✅ Connected to JARVIS');
+      } else {
+        console.error('❌ Could not connect after 15 attempts');
+      }
+    }
+    
+    // Start connection attempt immediately
+    tryConnect();
+    
+    // Normal polling once connected
+    setInterval(refresh, 2000);
+    
+    // Optional: Add keyboard shortcut (spacebar to listen)
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && !['BUTTON', 'INPUT', 'TEXTAREA'].includes(e.target.tagName) && recognition && !isListening && !isProcessing) {
+        e.preventDefault();
+        recognition.start();
+      }
+    });
+  
+    document.querySelector('#command-form').addEventListener('submit', event => {
+      event.preventDefault();
+      const input = document.querySelector('#command');
+      if (!input.value.trim() || isProcessing) return;
+      sendVoiceMessage(input.value);
+      input.value = '';
+    });
+    function updateClock() {
+      document.querySelector('#clock').textContent = new Date().toLocaleTimeString('en-GB');
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+</script>
+</body>
+</html>

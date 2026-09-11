@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jarvis-local"
+version = "1.4.0"
+description = "A local-first terminal assistant powered by Ollama."
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+voice = [
+	"faster-whisper>=1.1",
+	"numpy>=1.26",
+	"pynput>=1.7",
+	"sounddevice>=0.5",
+]
+voice-output = [
+	"numpy>=1.26",
+	"piper-tts>=1.2",
+	"sounddevice>=0.5",
+]
+wake-word = [
+	"numpy>=1.26",
+	"openwakeword>=0.6",
+	"sounddevice>=0.5",
+]
+dashboard = [
+	"fastapi>=0.115",
+	"uvicorn>=0.30",
+]
+rag = [
+	"chromadb>=0.5",
+	"pypdf>=5.0",
+	"python-docx>=1.1",
+	"sentence-transformers>=3.0",
+]
+
+[tool.setuptools.packages.find]
+include = ["jarvis*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
