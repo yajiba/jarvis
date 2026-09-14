@@ -1,421 +1,267 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>JARVIS Neural Interface</title>
-<style>
-:root{color-scheme:dark;--cyan:#cbb9ff;--muted:#9693a5;--line:#ffffff12;--green:#a1d9bf;font-family:"Segoe UI",sans-serif;color:#eeedf4;background:#101015}*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 22% 48%,#29223888,transparent 52%),#101015;min-height:100svh}main{max-width:1240px;margin:auto;padding:32px 40px;min-height:100svh;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto 1fr auto auto auto;column-gap:64px}header{grid-column:1/-1;display:flex;align-items:center;gap:18px;padding-bottom:26px;border-bottom:1px solid var(--line)}h1{font-size:20px;font-weight:600;letter-spacing:.12em;margin:0}.eyebrow{font-size:11px;color:var(--muted);margin:0;letter-spacing:.04em}#clock{margin-left:auto;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}.face-panel{grid-column:1;grid-row:2/6;display:flex;flex-direction:column;justify-content:center;align-items:center;min-height:520px}.face-panel::before{content:"A little presence. A lot of possibility.";color:var(--muted);font-size:12px;letter-spacing:.03em;margin-bottom:45px}.face-panel::after{content:"JARVIS";font-size:11px;letter-spacing:.4em;color:#797486;margin-top:52px}.face-stage{display:grid;place-items:center;position:relative;width:min(360px,75vw);aspect-ratio:1;cursor:pointer}.aura-ring{position:absolute;border-radius:50%;pointer-events:none}.one{inset:0;border:1px solid #bfa4ff12}.two{inset:8%;background:radial-gradient(circle,#b18cef14,transparent 70%)}.three{display:none}.companion-face{width:68%;height:60%;border:1px solid #c9b0ff70;border-radius:47% 47% 44% 44%;background:linear-gradient(145deg,#b9a0ed20,#b9a0ed05);box-shadow:0 0 70px #b89aff10,inset 0 0 38px #c8adff08;position:relative;animation:float 6s ease-in-out infinite}.eyes{position:absolute;top:34%;left:20%;right:20%;display:flex;justify-content:space-between}.eye{width:32px;height:19px;border-top:3px solid #e0cfff;border-radius:50%;position:relative;filter:drop-shadow(0 0 7px #d0b5ff);animation:blink 7s infinite}.eye::after{content:"";position:absolute;width:5px;height:10px;background:#e5d4ff;border-radius:50%;left:13px;top:2px}.eye:first-child{transform:rotate(-8deg)}.eye:last-child{transform:rotate(8deg)}.cheeks{position:absolute;top:52%;left:15%;right:15%;display:flex;justify-content:space-between}.cheeks::before,.cheeks::after{content:"";width:30px;height:10px;background:#e49bc929;border-radius:50%;filter:blur(5px)}.orb{position:absolute;left:41%;top:63%;width:18%;height:14px;border-bottom:2px solid #e3cafa;border-radius:0 0 50% 50%}.orb.speaking{animation:talk .25s infinite alternate}.processing .companion-face{animation:float 2s infinite;box-shadow:0 0 65px #b89aff30}.listening .companion-face{border-color:#a1d9bf;box-shadow:0 0 50px #a1d9bf20}.face-status{position:absolute;bottom:-16px;font-size:12px;color:var(--muted)}.waveform{display:none}.console{align-self:stretch;grid-column:2;grid-row:2;background:#1b1a22;border:1px solid var(--line);border-radius:22px 22px 0 0;margin-top:36px;padding:24px 24px 8px;min-height:300px}.console-heading{display:flex;justify-content:space-between;font-size:14px;font-weight:500;padding-bottom:20px;border-bottom:1px solid var(--line)}#message-count{font-size:11px;color:var(--muted)}.transcript{height:clamp(220px,37vh,440px);overflow:auto;padding-top:22px;scrollbar-width:thin;scrollbar-color:#4a425b transparent}.message{margin:0 0 22px;max-width:95%}.message-label{color:var(--muted);font-size:10px;margin-bottom:7px;letter-spacing:.04em}.message-text{font-size:14px;line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere}.user{margin-left:20%;padding:12px 16px;background:#c8b0ff12;border-radius:14px 14px 3px 14px}.user .message-label{color:#cbb9ff}.pending{color:#cbb9ff;font-size:13px;padding:12px 0;animation:fade 1.5s infinite}.error .message-text{color:#edacb5}form{grid-column:2;grid-row:3;display:flex;gap:8px;background:#1b1a22;border:1px solid var(--line);border-top:0;border-radius:0 0 22px 22px;padding:16px;margin:0}input,button{font:13px "Segoe UI",sans-serif;border:0;border-radius:10px;min-height:44px}input{flex:1;width:0;background:#111116;padding:0 14px;color:#eeedf4;outline:none}input::placeholder{color:#827b90}button{background:#cbb9ff;color:#251e33;padding:0 16px;cursor:pointer;font-weight:600}button:hover{filter:brightness(1.1)}button:disabled{opacity:.45;cursor:wait}.mic{background:#ffffff08;color:#d5cce5}button:focus-visible,input:focus-visible{outline:2px solid #cbb9ff;outline-offset:3px}.metrics{grid-column:2;grid-row:4;display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:22px 4px}.metric-label{font-size:9px;color:var(--muted);margin-bottom:8px;letter-spacing:.04em}.metric-value{font-size:14px;color:#c7c1d1}.metric-bar{display:none}#voice-hint{grid-column:2;grid-row:5;color:var(--muted);font-size:11px;text-align:center;margin:0 0 12px}footer{grid-column:1/-1;display:flex;justify-content:space-between;border-top:1px solid var(--line);padding-top:18px;margin-top:24px;font-size:10px;color:var(--muted)}.system-state{color:var(--green)}.system-state[data-state="offline"]{color:#edacb5}@keyframes float{50%{transform:translateY(-8px)}}@keyframes blink{0%,44%,48%,100%{opacity:1}46%{opacity:.15}}@keyframes talk{to{height:20px;transform:scaleX(.8)}}@keyframes fade{50%{opacity:.45}}@media(max-width:800px){main{padding:22px;display:flex;flex-direction:column}header{gap:12px}.eyebrow{display:none}.face-panel{min-height:310px}.face-panel::before{display:none}.face-panel::after{display:none}.face-stage{width:250px}.console{margin-top:20px;min-height:230px}.transcript{height:230px}.metrics{gap:8px}.metric-label{font-size:8px}footer{margin-top:16px}}@media(prefers-reduced-motion:reduce){*{animation:none!important}}
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>JARVIS / Personal intelligence</title><style>
+:root{color-scheme:dark;--cyan:#6ceaf0;--text:#edf4fc;--muted:#8298aa;--line:#16333f;font-family:"Segoe UI",sans-serif;background:#040d14;color:var(--text)}*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 46% 35%,#09273355,transparent 65%),#040d14;min-height:100vh}button,input{font:inherit}button{cursor:pointer;color:inherit}button:disabled{opacity:.4;cursor:default}button:focus-visible,input:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var(--cyan);outline-offset:4px}button{border:0;background:none}a{color:inherit;text-decoration:none}.sidebar{position:fixed;inset:0 auto 0 0;width:140px;border-right:1px solid var(--line);display:flex;flex-direction:column;padding:28px 12px;z-index:5;background:#040e16}.logo{text-align:center;letter-spacing:.18em;font-size:13px;font-weight:700}.logo-mark{font-size:49px;line-height:1;color:var(--cyan);text-shadow:0 0 24px #27ddeb50;margin-bottom:12px}.nav{display:grid;gap:12px;margin-top:48px}.nav a{font-size:12px;color:#91aaba;padding:13px 10px;border-radius:9px;display:flex;gap:12px}.nav a.active,.nav a:hover{background:#0c2733;color:#d9fcff}.nav a.active{box-shadow:inset 2px 0 var(--cyan)}.nav-icon{font-size:19px;color:#73cbd5;line-height:16px}.sidebar-note{margin-top:auto;font-size:12px;color:var(--muted);line-height:1.6;padding:16px 9px}.sidebar-note span{font-size:25px;display:block;color:#69cad6;margin-bottom:12px}main{margin-left:140px;max-width:1800px;padding:26px 28px;display:grid;grid-template-columns:minmax(440px,1.1fr) minmax(470px,1fr);gap:28px;min-height:100vh}.hero{display:flex;flex-direction:column;min-width:0}.welcome{display:flex;justify-content:space-between;gap:18px;padding:24px 8px 0}.welcome h1{font-size:clamp(26px,2.5vw,43px);letter-spacing:-.035em;margin:0 0 5px;font-weight:600}.welcome h1::first-letter{color:#7df4f4;text-shadow:0 0 20px #2dd9e8}.welcome p{font-size:clamp(20px,2vw,29px);color:#8c9dac;margin:0}.dateblock{min-width:126px;padding-top:3px}.dateblock p{font-size:11px;line-height:1.6}.dateblock #clock{font-size:22px;margin:4px 0 10px;color:#edf4fc}.dateblock small{color:#6f8597;font-size:11px;line-height:1.6}.face-panel{position:relative;display:grid;place-items:center;min-height:410px;flex:1}.face-stage{position:relative;width:min(100%,530px);aspect-ratio:1;display:grid;place-items:center;isolation:isolate;cursor:pointer}.portrait{position:relative;width:94%;height:100%;filter:drop-shadow(0 0 var(--voice-glow,12px) #13abc52b);transform:scale(var(--voice-scale,1));transform-origin:50% 80%;transition:filter .1s}.aura-ring{position:absolute;inset:10% 3%;border:1px solid #19bfd020;border-radius:50%;z-index:-1}.aura-ring.two{inset:15% 9%;border-left-color:#42e6e6;border-right-color:#42e6e6;transform:rotate(-20deg)}.aura-ring.three{inset:7% 1%;border-style:dashed;border-color:#18b7cc1c}.speaking .aura-ring.one{border-color:#60edf680;box-shadow:0 0 var(--voice-glow,20px) #2de0e320}.listening .aura-ring.two{border-color:#82e5b9}.processing .aura-ring.three{animation:orbit 8s linear infinite}.face-status{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:#03121cea;border:1px solid #207487;border-radius:30px;padding:7px 16px;color:#86eff4;white-space:nowrap;font-size:10px;letter-spacing:.1em}.portrait-caption{position:absolute;left:5px;top:48%;font-size:9px;line-height:2;letter-spacing:.3em;color:#67dce5}.portrait-caption.right{left:auto;right:0;top:67%;font-size:8px}.waveform{display:none}.composer{display:flex;align-items:center;gap:10px;border:1px solid #4bd6e3;border-radius:40px;padding:9px;background:#04111be6;box-shadow:0 0 24px #0da4c011;position:relative;z-index:2;margin-top:-12px}.composer input{flex:1;width:0;border:0;background:none;color:#edf4fc;min-height:43px;outline:none;font-size:15px}.composer input::placeholder{color:#819caa}.composer button{border:1px solid #2594ac;border-radius:30px;height:47px;min-width:47px;background:linear-gradient(135deg,#176578,#063049);font-size:11px}.composer button[type=submit]{background:linear-gradient(130deg,#1eacbf,#096474);border-color:#61e9ef;color:white}.voice-toolbar{display:flex;align-items:center;justify-content:center;gap:14px;min-height:35px;margin:8px 0;font-size:10px;color:#809caa}.voice-toolbar button{font-size:10px;color:#9bbbc7;padding:5px}.voice-toolbar button[aria-pressed=true]{color:#6df0e8}.mic-level{display:flex;gap:6px;align-items:center}.mic-level meter{height:8px;width:55px}#voice-hint{font-size:10px;color:#6c8b9c;text-align:center;min-height:15px;margin:0 0 10px}.quick-actions{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-top:auto}.quick-actions button{border:1px solid var(--line);background:linear-gradient(#0a202c90,#07151e);border-radius:9px;min-height:83px;font-size:11px}.quick-actions span{display:block;font-size:23px;color:#66e6ee;margin-bottom:9px}.workspace{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-content:start;padding-top:25px;min-width:0}.card{border:1px solid var(--line);border-radius:10px;background:linear-gradient(130deg,#0b202d99,#091923bb);padding:19px;min-width:0;scroll-margin-top:20px}.card-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:17px}.card h2{font-size:16px;margin:0;font-weight:600;letter-spacing:-.015em}.card-head button,.card-head a{font-size:10px;color:#69d7e2}.card-head small{font-size:10px;color:var(--muted)}.schedule,.tasks{min-height:146px;max-height:200px;overflow:auto}.empty{color:#6d899a;font-size:12px;line-height:1.7;margin:12px 0}.task-row{padding:10px 0;border-bottom:1px solid #ffffff06;display:flex;gap:10px;font-size:12px;line-height:1.5}.task-dot{width:7px;height:7px;background:#39c7df;border-radius:50%;margin-top:5px;flex-shrink:0}.task-row small{display:block;color:#7d9aa9;font-size:10px;margin-top:3px}.health{grid-column:1/-1}.health summary{cursor:pointer;display:flex;justify-content:space-between;font-size:15px;font-weight:600}.health summary span{font-size:10px;font-weight:400;color:#65dbae}.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:21px}.metric{text-align:center;padding:12px 4px;border-radius:10px;border:1px solid #21506366;background:#071822}.metric-label{font-size:9px;color:#7d9dad;margin-bottom:8px}.metric-value{font-size:15px;color:#b8f3f4}.runtime-info{display:flex;justify-content:space-between;gap:10px;margin-top:17px;font-size:10px;color:#7ca8b6}.console{grid-column:1/-1}.console-heading{display:flex;justify-content:space-between;font-size:15px;font-weight:600;border-bottom:1px solid var(--line);padding-bottom:13px}#message-count{font-size:10px;color:#70bfcf}.transcript{height:200px;overflow:auto;padding-top:15px;scrollbar-width:thin;scrollbar-color:#164154 transparent}.message{margin-bottom:18px}.message-label{font-size:9px;color:#528d9e;margin-bottom:5px}.message-text{font-size:12px;line-height:1.75;overflow-wrap:anywhere}.message-text p{margin:0 0 8px}.message-text ul,.message-text ol{padding-left:20px}.message-text h3{font-size:14px}.message-text pre{overflow:auto;padding:12px;background:#020c12;border-radius:6px}.message-text code{font-family:Consolas,monospace;color:#9fe7e9}.user{margin-left:18%;padding:10px 12px;background:#11364466;border-radius:10px}.reply-duration{font-size:9px;color:#668c9b}.pending{font-size:12px;color:#64dfe6;padding:12px}.error{color:#ffb4a5}.memory-list{max-height:130px;overflow:auto;font-size:12px;line-height:1.7;color:#9cb4c1}.memory-item{padding:8px 0;border-bottom:1px solid #ffffff08}.connection-list{font-size:11px;line-height:2;color:#a2bdc9}.connection-list span{color:#74e1df}.bottom-note{grid-column:1/-1;display:flex;justify-content:space-between;color:#7797a7;font-size:11px;padding:16px 19px}.bottom-note b{color:#64ded6;font-weight:400;letter-spacing:.25em}.system-state[data-state=offline]{color:#ffb4a5}#model{color:#78c7d1}@keyframes orbit{to{transform:rotate(360deg)}}@media(min-width:1550px){main{padding-top:35px}.face-stage{width:570px}.transcript{height:240px}.card{padding:23px}.schedule,.tasks{min-height:170px}}@media(max-width:1150px){.sidebar{width:76px;padding:24px 7px}.logo{font-size:9px}.logo-mark{font-size:35px}.nav a{font-size:0;justify-content:center}.nav-icon{font-size:21px}.sidebar-note{display:none}main{margin-left:76px;padding:18px;gap:20px;grid-template-columns:minmax(330px,1fr) minmax(350px,1fr)}.dateblock{display:none}.welcome h1{font-size:30px}.portrait-caption{display:none}.card{padding:15px}.metrics{gap:5px}.metric-value{font-size:12px}}@media(max-width:850px){main{grid-template-columns:1fr}.hero{min-height:650px}.workspace{padding-top:5px}.face-stage{width:420px}.quick-actions{margin-top:10px}.dateblock{display:block}.welcome h1{font-size:32px}}@media(max-width:500px){.sidebar{width:58px}.logo{font-size:7px}.logo-mark{font-size:29px}main{margin-left:58px;padding:12px}.workspace{grid-template-columns:1fr}.health,.console,.bottom-note{grid-column:1}.welcome{padding:15px 0}.welcome h1{font-size:25px}.welcome p{font-size:19px}.dateblock{display:none}.face-stage{width:100%}.face-panel{min-height:310px}.hero{min-height:570px}.quick-actions{grid-template-columns:repeat(2,1fr)}.quick-actions button{min-height:67px}.composer input{font-size:12px}.voice-toolbar{gap:5px;flex-wrap:wrap}.card h2{font-size:15px}.metrics{grid-template-columns:repeat(2,1fr)}}@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.portrait{transform:none}}
 
-/* Soft glass companion */
-body { background: radial-gradient(ellipse at 24% 45%, #32254266, transparent 48%), radial-gradient(ellipse at 90% 0%, #22253540, transparent 40%), #101015; }
-main { max-width: 1400px; column-gap: 76px; padding: 30px 48px; }
-header { padding-bottom: 24px; }
-h1 { font-size: 18px; letter-spacing: .18em; }
-.face-panel::before { content: "HERE WITH YOU"; font-size: 9px; letter-spacing: .28em; color: #b7a4c8; margin-bottom: 30px; }
-.face-panel::after { content: "A familiar voice. A thoughtful companion."; letter-spacing: .02em; font-size: 12px; color: #898294; margin-top: 60px; }
-.face-stage { width: min(430px, 78vw); isolation: isolate; }
-.face-stage::before { content: ""; position: absolute; inset: 8%; border-radius: 50%; background: radial-gradient(ellipse, #c292ff1a, transparent 68%); filter: blur(22px); }
-.one { inset: 0; border: 1px solid #cdb4ed0b; }
-.two { inset: 7%; border: 1px solid #cdb4ed10; background: none; }
-.three { display: block; inset: 7%; border: 1px solid transparent; border-top-color: #dabaff38; transform: rotate(-35deg); }
-.companion-face { width: 68%; height: 62%; border-radius: 46% 46% 44% 44% / 43% 43% 53% 53%; border: 1px solid #e4c8ff65; background: radial-gradient(ellipse at 35% 15%, #efd6ff24, transparent 50%), radial-gradient(ellipse at 65% 85%, #775ab32b, transparent 60%), linear-gradient(150deg, #493957dd, #231f32ee 65%); box-shadow: inset 0 2px 3px #f7e5ff40, inset 0 -5px 18px #b588df0d, 0 26px 60px #0005, 0 0 70px #bd8bff16; transition: border-color .4s, box-shadow .4s; }
-.companion-face::before { content: ""; position: absolute; inset: 7px; border: 1px solid #f4dfff0c; border-radius: inherit; pointer-events: none; }
-.companion-face::after { content: ""; position: absolute; top: 9%; left: 23%; width: 34%; height: 12%; border-top: 2px solid #f4e1ff20; border-radius: 50%; transform: rotate(-14deg); filter: blur(1px); }
-.eyes { top: 36%; left: 19%; right: 19%; align-items: center; }
-.eye { width: 47px; height: 39px; border: 0; border-radius: 46% 46% 48% 48%; background: radial-gradient(ellipse at 50% 38%, #ffefff 0%, #e4caff 50%, #b98dde 100%); box-shadow: 0 0 18px #dec0ff65, 0 0 40px #c9a7ff18; filter: none; animation: eye-blink 6.8s infinite; transform-origin: center; }
-.eye:first-child, .eye:last-child { transform: none; }
-.eye::before { content: ""; position: absolute; width: 19px; height: 27px; left: 15px; top: 7px; border-radius: 50%; background: linear-gradient(#4c345e, #88609f); box-shadow: inset 0 1px 4px #241832; animation: eye-glance 12s ease-in-out infinite; }
-.eye::after { width: 7px; height: 9px; left: 19px; top: 10px; background: #fff9ff; box-shadow: 7px 12px 0 -2px #e6d3ff; animation: eye-glance 12s ease-in-out infinite; }
-.lash { position: absolute; width: 9px; height: 9px; top: -3px; border-bottom: 2px solid #e8ceff; }
-.eye:first-child .lash { left: -5px; transform: rotate(28deg); }
-.eye:last-child .lash { right: -5px; transform: rotate(-28deg); }
-.brows { position: absolute; top: 27%; left: 21%; right: 21%; display: flex; justify-content: space-between; }
-.brows::before, .brows::after { content: ""; width: 33px; height: 9px; border-top: 2px solid #e0bdff80; border-radius: 50%; }
-.brows::before { transform: rotate(-8deg); }.brows::after { transform: rotate(8deg); }
-.cheeks { top: 57%; left: 15%; right: 15%; }
-.cheeks::before, .cheeks::after { width: 39px; height: 15px; background: #ed9fc83d; filter: blur(8px); }
-.orb { left: 42%; top: 66%; width: 16%; height: 15px; border-bottom: 2px solid #f4d6ec; border-radius: 0 0 55% 55%; filter: drop-shadow(0 0 5px #efbfed40); transition: height .2s; }
-.orb.speaking { animation: mouth-speak .32s ease-in-out infinite alternate; background: #c088b633; border: 1px solid #f0c7e0; border-radius: 45%; }
-.listening .companion-face { border-color: #b9e5d0; box-shadow: inset 0 2px 3px #e3fff540, 0 0 65px #a1d9bf20, 0 26px 60px #0005; }
-.listening .brows { transform: translateY(-4px); }.listening .eye { background: radial-gradient(ellipse, #f0fff9, #aadac9); }
-.processing .three { animation: thinking-ring 3s linear infinite; }
-.processing .eye::before, .processing .eye::after { animation: none; transform: translate(5px,-3px); }
-.face-status { bottom: -14px; padding: 8px 15px; border-radius: 30px; border: 1px solid #ffffff09; background: #ffffff03; color: #bfb4ca; font-size: 11px; }
-.face-status::before { content: ""; display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: #addec8; margin-right: 8px; }
-.console { background: linear-gradient(145deg,#222029,#19181f); border-color: #ffffff0d; box-shadow: 0 20px 60px #0002; padding: 26px 28px 8px; border-radius: 24px 24px 0 0; }
-.console-heading { font-size: 14px; border-color: #ffffff0a; }
-#message-count { background: #ffffff06; padding: 3px 8px; border-radius: 7px; }
-.message { margin-bottom: 26px; }.message-label { font-size: 9px; color: #91889f; margin-bottom: 8px; }.message-text { color: #e2dce9; font-size: 14px; line-height: 1.85; }
-.user { background: #bfa0ed12; border: 1px solid #d6b5ff0a; }.user .message-text { color: #ece1fa; }
-form { background: #19181f; padding: 16px 20px 20px; border-color: #ffffff0d; border-radius: 0 0 24px 24px; }
-input { min-height: 48px; background: #101015; border: 1px solid #ffffff05; border-radius: 13px; }
-button { border-radius: 13px; background: linear-gradient(145deg,#e0caff,#bfa7ef); }.mic { background: #ffffff05; }
-.metrics { padding-top: 24px; }.metric { padding-left: 12px; border-left: 1px solid #ffffff0b; }.metric-value { font-size: 13px; }.metric-label { font-size: 8px; letter-spacing: .06em; }
-@keyframes eye-blink { 0%,43%,47%,100% { scale: 1 1; } 45% { scale: 1 .08; } }
-@keyframes eye-glance { 0%,30%,55%,100% { translate: 0 0; } 35%,48% { translate: 3px 0; } 70%,80% { translate: -2px 1px; } }
-@keyframes mouth-speak { 0% { height: 5px; transform: scaleX(.85); } 100% { height: 17px; transform: scaleX(1); } }
-@keyframes thinking-ring { to { transform: rotate(325deg); } }
-@media(max-width:800px) { main { padding: 22px; }.face-panel { min-height: 350px; }.face-panel::before { display: none; }.face-stage { width: 290px; }.face-panel::after { display: none; }.eye { width: 34px; height: 29px; }.eye::before { left: 10px; top: 5px; width: 15px; height: 21px; }.eye::after { left: 13px; top: 7px; width: 5px; height: 7px; }.brows::before,.brows::after { width: 24px; }.console { padding: 22px 20px 8px; }.metric { padding-left: 7px; } }
-@media(prefers-reduced-motion:reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+.avatar{position:relative;width:min(72%,370px);height:auto;aspect-ratio:1145/1374;overflow:hidden;transform:translateY(8px);filter:drop-shadow(0 20px 24px #000a) drop-shadow(0 0 18px #2bdcec38)}
+.avatar .avatar-body{display:block;width:100%;height:100%;pointer-events:none}
+.avatar-blink{position:absolute;inset:0;z-index:2;opacity:0;background:url('/ui/portrait-blink-v2.png?v=1') center/100% 100% no-repeat;clip-path:polygon(28% 29%,72% 29%,72% 41%,28% 41%);pointer-events:none;animation:avatar-blink 6.4s step-end infinite}
+.talk-mouth{position:absolute;inset:0;z-index:3;opacity:0;background-position:center;background-size:100% 100%;background-repeat:no-repeat;clip-path:polygon(38% 45%,62% 45%,62% 57%,38% 57%);pointer-events:none}
+.talk-lower{position:absolute;opacity:0;transform:translateX(15px)}
+.avatar[data-mouth=small] .talk-mouth,.avatar[data-mouth=medium] .talk-mouth{opacity:1;background-image:url('/ui/portrait-mouth-medium-v2.png?v=1')}.avatar[data-mouth=round] .talk-mouth{opacity:1;background-image:url('/ui/portrait-mouth-round-v2.png?v=1')}.avatar[data-mouth=wide] .talk-mouth{opacity:1;background-image:url('/ui/portrait-mouth-wide-v2.png?v=1')}
+@keyframes avatar-blink{0%,44%,48%,76%,82%,100%{opacity:0}45%,47%,77%,81%{opacity:1}}
+.face-stage::before{content:"";position:absolute;inset:18%;z-index:-1;border-radius:50%;background:radial-gradient(circle,#32dce600 35%,#32dce60d 60%,transparent 72%);filter:blur(10px);pointer-events:none}
+.speaking .face-stage::before{background:radial-gradient(circle,#3cebf01f 20%,#20cbd62b 48%,transparent 72%);filter:blur(calc(var(--voice-glow,25px) * .32))}
+.listening .face-stage::before{background:radial-gradient(circle,#6ef4da1f 20%,#39d6c11c 50%,transparent 72%)}
+@media(max-width:500px){.avatar{width:min(78%,310px)}}
+@media(prefers-reduced-motion:reduce){.avatar{transform:translateY(8px)}.avatar-blink,.talk-mouth{animation:none!important;opacity:0!important}}
 
-/* Minimal voice circle */
-.companion-face {
-  width: 58%; height: auto; aspect-ratio: 1; border-radius: 50%;
-  border: 1px solid #dcc8ff90;
-  background: radial-gradient(circle at 42% 35%, #cbb6ee18, #8e6dbf0c 60%, #17131f);
-  box-shadow: 0 0 38px #bb91f522, inset 0 0 35px #bc95ec12;
-  animation: float 6s ease-in-out infinite;
+/* Compact desktop shell and dependable iconography. */
+@media(min-width:851px){
+ .sidebar{width:116px;padding:22px 10px}.logo-mark{font-family:"Segoe UI Symbol",sans-serif;font-size:39px;margin-bottom:8px}.nav{margin-top:32px;gap:7px}.nav a{padding:11px 9px}.sidebar-note{padding:12px 7px}
+ main{margin-left:116px;max-width:none;height:100vh;min-height:720px;padding:18px 24px;grid-template-columns:minmax(420px,.95fr) minmax(620px,1.3fr);gap:20px;overflow:hidden;align-items:start}
+ .hero{height:auto;min-height:0}.welcome{padding:10px 8px 0}.welcome h1{font-size:clamp(28px,2.15vw,39px)}.welcome p{font-size:clamp(19px,1.65vw,25px)}
+ .face-panel{height:min(52vh,500px);min-height:410px;flex:none}.face-stage{width:min(100%,450px)}.composer{margin-top:-5px}.quick-actions{margin-top:4px}.quick-actions button{min-height:64px}
+ .workspace{height:calc(100vh - 36px);padding-top:0;gap:10px;overflow-y:auto;align-content:start;scrollbar-width:thin;scrollbar-color:#164154 transparent}.card{padding:14px 16px}.card-head{margin-bottom:11px}
+ #automation-panel{grid-column:1}#vision-panel{grid-column:2}#vision-panel .quick-actions{grid-template-columns:repeat(2,1fr);gap:7px;margin:0}#vision-panel .quick-actions button{min-height:47px;padding:6px}
+ .schedule,.tasks{min-height:96px;max-height:126px}.health{padding-block:13px}.metrics{margin-top:14px}.transcript{height:130px;padding-top:11px}.memory-list{max-height:105px}.bottom-note{padding:11px 16px}
 }
-.companion-face::before, .companion-face::after { display: none; }
-.circle-core { position: absolute; inset: 0; border-radius: 50%; transition: box-shadow .3s; }
-.circle-core.speaking { animation: circle-speech .65s ease-in-out infinite alternate; }
-@keyframes circle-speech { to { box-shadow: 0 0 42px #cbb6ee55, inset 0 0 30px #cbb6ee30; } }
-@media(prefers-reduced-motion:reduce) { .circle-core.speaking { animation: none; } }
-
-/* Strong playback feedback, active only while audio is playing. */
-.face-panel.speaking .companion-face {
-  border: 2px solid #f0dcff;
-  background: radial-gradient(circle, #e7c7ff30, #ac77e530 60%, #9260c530);
-  box-shadow: 0 0 26px #d4aaff90, 0 0 85px #b27aef60, inset 0 0 45px #dfbdff40;
-  animation: speaking-breathe .8s ease-in-out infinite alternate;
+.nav-icon{font-family:"Segoe UI Symbol",sans-serif;display:inline-grid;place-items:center;width:20px;flex:0 0 20px;font-size:17px}.quick-actions span{font-family:"Segoe UI Symbol",sans-serif}.card{box-shadow:inset 0 1px #ffffff06,0 8px 28px #00000012}.card:hover{border-color:#245064}.composer{box-shadow:0 10px 35px #0005,0 0 22px #0da4c018}.face-status{box-shadow:0 5px 18px #0007}
+.drop-zone{grid-column:1/-1;display:flex;align-items:center;justify-content:center;gap:7px;min-height:34px;padding:7px;border:1px dashed #2d7486;border-radius:8px;color:#80b9c6;font-size:10px;cursor:pointer;transition:.15s}.drop-zone:hover,.drop-zone.active{color:#d9fcff;border-color:var(--cyan);background:#12354288}.drop-zone input{display:none}body.dragging::after{content:"Drop to analyze";position:fixed;inset:14px;z-index:100;display:grid;place-items:center;border:2px dashed var(--cyan);border-radius:16px;background:#03121aee;color:#bdfcff;font-size:22px;letter-spacing:.08em;pointer-events:none}
+.composer-attach{display:grid;place-items:center;border:1px solid #2594ac;border-radius:30px;height:47px;min-width:47px;background:linear-gradient(135deg,#176578,#063049);font-size:18px;cursor:pointer}.attachment-tray{display:flex;align-items:center;gap:8px;min-height:25px;padding:4px 18px;color:#9ddde2;font-size:10px}.attachment-tray[hidden]{display:none}.attachment-tray button{color:#ffb4a5;font-size:16px}
+.workspace[data-view="output"]>.card:not(#output-panel),.workspace[data-view="tasks"]>.card:not(#tasks-panel){display:none}.workspace[data-view="output"] #output-panel,.workspace[data-view="tasks"] #tasks-panel{display:flex;grid-column:1/-1;min-height:calc(100vh - 36px);flex-direction:column}.workspace[data-view="tasks"] #tasks-panel .tasks{max-height:none;flex:1}.workspace-view-close{border:1px solid #245064;border-radius:20px!important;padding:6px 12px;color:#9ddde2!important}.output-content{display:grid;grid-template-columns:minmax(240px,.85fr) minmax(300px,1.15fr);gap:20px;min-height:0;flex:1}.output-preview{display:grid;place-items:center;align-content:center;min-height:360px;border:1px solid #163f4d;border-radius:10px;background:#031018;overflow:hidden}.output-preview img{display:block;max-width:100%;max-height:68vh;object-fit:contain}.output-file{padding:30px;text-align:center;color:#91b8c5;overflow-wrap:anywhere}.output-file span{display:block;font-size:44px;color:var(--cyan);margin-bottom:15px}.output-answer{padding:8px 4px;overflow:auto;font-size:14px;line-height:1.75}.output-answer .pending{padding-left:0}@media(max-width:1100px){.output-content{grid-template-columns:1fr}.output-preview{min-height:260px}.workspace[data-view="output"] #output-panel,.workspace[data-view="tasks"] #tasks-panel{min-height:600px}}
+@media(max-width:850px){.hero{height:auto}.workspace{height:auto;overflow:visible;gap:10px}.workspace .card{padding:14px}.schedule,.tasks{min-height:90px;max-height:130px}.transcript{height:150px}#vision-panel{grid-column:1/-1}}
+</style></head><body>
+<aside class="sidebar"><a class="logo" href="#home"><div class="logo-mark">&#9672;</div>J.A.R.V.I.S</a><nav class="nav" aria-label="Main navigation"><a href="#home" class="active" title="Home"><span class="nav-icon">&#8962;</span>Home</a><a href="#today" title="Today"><span class="nav-icon">&#9788;</span>Today</a><a href="#tasks-panel" title="Tasks"><span class="nav-icon">&#10003;</span>Tasks</a><a href="#conversation" title="Conversation"><span class="nav-icon">&#9993;</span>Chat</a><a href="#memory-panel" title="Memory"><span class="nav-icon">&#9671;</span>Memory</a><a href="#system-panel" title="System"><span class="nav-icon">&#9881;</span>System</a></nav><div class="sidebar-note"><span>&#10022;</span>A calmer tomorrow,<br>together.</div></aside>
+<main id="home"><section class="hero"><header class="welcome"><div><h1 id="greeting">Hello, there.</h1><p>How can I help?</p></div><div class="dateblock"><p id="today-date"></p><div id="clock"></div><small>Focus today.<br>A brighter tomorrow.</small></div></header>
+<section class="face-panel" id="face-panel" aria-label="JARVIS voice activity"><div class="portrait-caption">LISTEN<br>THINK<br>ORGANIZE<br>ASSIST<br>WITH YOU</div><div class="face-stage"><div class="aura-ring one"></div><div class="aura-ring two"></div><div class="aura-ring three"></div><div class="portrait avatar" id="avatar" role="img" aria-label="JARVIS animated avatar" data-mouth="rest">
+<img class="avatar-body" src="/ui/portrait-clean.png?v=3" alt=""><span class="avatar-blink"></span><span class="talk-mouth"><span class="talk-lower"></span></span>
+</div><div class="waveform" id="waveform"></div><div class="face-status" id="face-status" role="status">Connecting</div></div><div class="portrait-caption right">A MORE<br>CAPABLE<br>YOU</div></section>
+<form class="composer" id="command-form"><button type="button" id="talk-button" aria-label="Toggle wake-word microphone" aria-pressed="true">Mic on</button><label class="composer-attach" for="file-upload" title="Attach a file" aria-label="Attach a file">+</label><input id="command" aria-label="Message JARVIS" placeholder="Ask JARVIS anything..." autocomplete="off"><button type="submit" aria-label="Send message">Send</button></form>
+<div class="attachment-tray" id="attachment-tray" hidden><span id="attachment-name"></span><button type="button" id="remove-attachment" aria-label="Remove attachment">&times;</button></div>
+<div class="voice-toolbar"><button id="mute" type="button" aria-pressed="false">Mute</button><button id="stop-voice" type="button" disabled>Stop speaking</button><div class="mic-level"><label for="mic-meter">Microphone</label><meter id="mic-meter" min="0" max="1" value="0">0</meter><span id="mic-state">Starting</span></div></div><p id="voice-hint">Say “Hey Jarvis” followed by your command</p>
+<div class="quick-actions"><button data-prompt="Add a task to " type="button"><span>+</span>Create a task</button><button data-prompt="Help me plan my day using my open tasks." type="button"><span>&#9783;</span>Plan my day</button><button data-prompt="Summarize this: " type="button"><span>&#8801;</span>Summarize</button><button data-prompt="Help me brainstorm ideas for " type="button"><span>&#10022;</span>Brainstorm</button></div></section>
+<section class="workspace" aria-label="Personal dashboard">
+<section class="card" id="output-panel" hidden><div class="card-head"><div><h2 id="output-title">Output</h2><small id="output-status">Ready</small></div><button type="button" class="workspace-view-close" id="close-output">Dashboard</button></div><div class="output-content"><div class="output-preview" id="output-preview"><p class="empty">Attach an image or document to preview it here.</p></div><div class="output-answer" id="output-answer"><p class="empty">The analysis or response will appear here.</p></div></div></section>
+<section class="card console" id="approval-panel" hidden aria-live="polite"><div class="card-head"><h2>Action approval</h2><small>Review before allowing</small></div><div id="approval-list"></div></section>
+<section class="card console" id="automation-panel"><div class="card-head"><h2>Automation</h2><button type="button" data-prompt="Schedule an approved project command for ">+ Schedule</button></div><div id="automation-list" class="memory-list"><p class="empty">No automations yet.</p></div><div id="automation-events" class="memory-list" aria-live="polite"></div></section>
+<section class="card console" id="vision-panel"><div class="card-head"><h2>Vision</h2><button type="button" data-prompt="Find the PowerPoint for this lesson, inspect it, open it after my approval, and discuss each slide in order.">Discuss slides</button></div><div class="quick-actions"><button type="button" data-prompt="Analyze my current screen and explain what you see.">Read screen</button><button type="button" data-prompt="Analyze this local image: ">Read image</button><button type="button" data-prompt="Capture one camera frame and describe what you see.">Read camera</button><button type="button" data-prompt="Help me with this GUI workflow. Analyze the screen first: ">GUI assistance</button><label class="drop-zone" id="drop-zone" for="file-upload">&#8681; Attach an image/document, then ask a question</label><input id="file-upload" type="file" hidden accept=".png,.jpg,.jpeg,.webp,.txt,.md,.csv,.json,.yaml,.yml,.pdf,.docx,.pptx"></div></section>
+<section class="card" id="today"><div class="card-head"><h2>Today</h2><small id="today-count">Scheduled tasks</small></div><div class="schedule" id="schedule"><p class="empty">Loading your schedule...</p></div></section>
+<section class="card" id="tasks-panel"><div class="card-head"><h2>Open tasks</h2><button type="button" data-prompt="Add a task to ">+ Add task</button></div><div id="tasks" class="tasks"><p class="empty">Loading your tasks...</p></div><span id="task-count" hidden>0</span></section>
+<details class="card health" id="system-panel"><summary>System health <span id="model-connection">Checking model...</span></summary><section class="metrics" aria-label="System telemetry"><div class="metric"><div class="metric-label">CPU</div><div class="metric-value" id="cpu">--</div></div><div class="metric"><div class="metric-label">RAM</div><div class="metric-value" id="ram">--</div></div><div class="metric"><div class="metric-label">GPU</div><div class="metric-value" id="gpu">--</div></div><div class="metric"><div class="metric-label">VOICE</div><div class="metric-value" id="voice">--</div></div></section><div class="runtime-info"><span id="voice-name">Piper voice</span><span id="reply-time">No replies yet</span></div></details>
+<section class="card console" id="conversation"><div class="console-heading"><span>Conversation</span><span id="message-count">0</span></div><div class="transcript" id="transcript" aria-live="polite"><div class="message ai"><div class="message-label">JARVIS</div><div class="message-text">I'm here. Let's make room for what matters.</div></div></div></section>
+<section class="card" id="memory-panel"><div class="card-head"><h2>Memory</h2><button type="button" data-prompt="Remember that ">+ Remember</button></div><div class="memory-list" id="memory-list"><p class="empty">Loading saved memories...</p></div></section>
+<section class="card"><div class="card-head"><h2>Connections</h2><a href="#system-panel">Details &rarr;</a></div><div class="connection-list"><div>Language model &middot; <span id="model">Checking</span></div><div id="system-state" class="system-state" role="status">Checking Ollama...</div><div>Speech &middot; <span>Local Piper</span></div><div>Memory &middot; <span>Local storage</span></div></div></section>
+<div class="card bottom-note"><span>Small steps, big progress.</span><b>JARVIS</b></div>
+</section></main><script>
+const TIME_ZONE = 'Asia/Taipei';
+const dayKey = date => date.toLocaleDateString('en-CA', {timeZone: TIME_ZONE});
+const $ = selector => document.querySelector(selector);
+const panel=$('#face-panel'), transcript=$('#transcript');
+let busy=false, listening=false, preparing=false, speaking=false, muted=false, online=false, activity='Thinking', count=0;
+let attachedFile=null,attachmentPreviewUrl=null;
+let audioContext, audio, audioUrl, speechController, micStream, meterSource, frame, micStarting=false;
+let micEnabled=true, recognitionRunning=false, wakeArmed=false, wakeTimer=null, recognitionRestart=null,lastWakeText='',lastWakeAt=0;
+let analysisTimeoutMs=615000;
+const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+const recognition=Recognition ? new Recognition() : null;
+function paint(){
+ const state=busy?activity:preparing?'Preparing voice':speaking?'Speaking':wakeArmed?'Listening':listening?'Say “Hey Jarvis”':online?'Ready':'Disconnected';
+ $('#face-status').textContent=state;
+ panel.classList.toggle('listening',wakeArmed);panel.classList.toggle('processing',busy||preparing);panel.classList.toggle('speaking',speaking);
+ $('#stop-voice').disabled=!(speaking||preparing);$('#talk-button').disabled=!recognition||micStarting;
+ $('#talk-button').textContent=micEnabled?'Mic on':'Mic off';$('#talk-button').setAttribute('aria-pressed',String(micEnabled));
 }
-.face-panel.speaking .circle-core::before,
-.face-panel.speaking .circle-core::after {
-  content: ""; position: absolute; inset: -3px;
-  border: 2px solid #d9b8ff; border-radius: 50%;
-  animation: voice-ripple 1.8s ease-out infinite;
+async function request(url,options={}){
+ const result=await fetch(url,options);let data;
+ try{data=await result.json();}catch{throw Error('The server returned an unreadable response.');}
+ if(!result.ok){const error=Error(typeof data.detail==='string'?data.detail:'Request failed (HTTP '+result.status+').');error.status=result.status;throw error;}return data;
 }
-.face-panel.speaking .circle-core::after { animation-delay: .9s; }
-.face-panel.speaking .face-status {
-  color: #f0dcff; border-color: #c397ed60; background: #b27aef1c;
-  font-weight: 600; letter-spacing: .08em;
+async function requestChat(text,signal){
+ while(true){try{return await request('/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text}),signal});}
+ catch(error){if(error.status!==409)throw error;activity='Waiting for previous reply';paint();await new Promise(resolve=>setTimeout(resolve,700));if(signal.aborted){const aborted=Error('Reply aborted');aborted.name='AbortError';throw aborted;}}}
 }
-.face-panel.speaking .face-status::before { background: #e5bfff; box-shadow: 0 0 9px #e5bfff; }
-@keyframes speaking-breathe { from { transform: scale(1); } to { transform: scale(1.08); } }
-@keyframes voice-ripple { from { transform: scale(1); opacity: .65; } to { transform: scale(1.5); opacity: 0; } }
-@media(prefers-reduced-motion:reduce) {
-  .face-panel.speaking .companion-face,
-  .face-panel.speaking .circle-core::before,
-  .face-panel.speaking .circle-core::after { animation: none !important; }
-  .face-panel.speaking .circle-core::before { transform: scale(1.15); opacity: .4; }
-  .face-panel.speaking .circle-core::after { transform: scale(1.3); opacity: .15; }
+async function requestUpload(file,question,signal){
+ const options={method:'POST',headers:{'Content-Type':'application/octet-stream','X-Filename':encodeURIComponent(file.name),'X-Question':encodeURIComponent(question)},body:file,signal};
+ while(true){try{return await request('/analyze-upload',options);}catch(error){if(error.status!==409)throw error;activity='Waiting for previous reply';paint();await new Promise(resolve=>setTimeout(resolve,700));if(signal.aborted){const aborted=Error('Analysis aborted');aborted.name='AbortError';throw aborted;}}}
 }
-</style>
-</head>
-<body>
-<main>
-<header><h1>J.A.R.V.I.S</h1><p class="eyebrow">Your everyday companion</p><div id="clock">00:00:00</div></header>
-<section class="face-panel" id="face-panel" aria-label="JARVIS voice activity">
-<div class="face-stage"><div class="aura-ring one"></div><div class="aura-ring two"></div><div class="aura-ring three"></div><div class="companion-face" role="img" aria-label="Glowing voice circle"><div id="mouth" class="circle-core"></div></div><div class="waveform" id="waveform"></div><div class="face-status" id="face-status" role="status">Connecting</div></div>
-</section>
-<section class="console" aria-label="Conversation"><div class="console-heading"><span>Conversation</span><span id="message-count">0</span></div><div class="transcript" id="transcript" aria-live="polite"><div class="message ai"><div class="message-label">JARVIS</div><div class="message-text">I'm here. What's on your mind?</div></div></div></section>
-<form id="command-form"><input id="command" aria-label="Command" placeholder="Ask me anything..." autocomplete="off"><button type="submit">Send</button><button type="button" class="mic" id="talk-button" aria-label="Activate microphone">Mic</button></form>
-<section class="metrics" aria-label="System telemetry">
-<div class="metric"><div class="metric-label">CPU LOAD</div><div class="metric-value" id="cpu">--</div><div class="metric-bar"><div class="metric-bar-fill" id="cpu-bar"></div></div></div>
-<div class="metric"><div class="metric-label">MEMORY USAGE</div><div class="metric-value" id="ram">--</div><div class="metric-bar"><div class="metric-bar-fill" id="ram-bar"></div></div></div>
-<div class="metric"><div class="metric-label">GPU STATUS</div><div class="metric-value" id="gpu">--</div></div>
-<div class="metric"><div class="metric-label">VOICE ENGINE</div><div class="metric-value" id="voice">--</div></div>
-</section>
-<p id="voice-hint">Type a message, or tap Mic to talk</p>
-<div hidden><span id="task-count">0</span><div id="tasks"></div></div>
-<footer><span id="system-state" class="system-state" role="status">Connecting</span><span id="model">LOCAL SYSTEM</span></footer>
-</main>
-<script>
-    const facePanel = document.querySelector('#face-panel');
-    const transcript = document.querySelector('#transcript');
-    const statusLabel = document.querySelector('#system-state');
-    const faceStatus = document.querySelector('#face-status');
-    const mouth = document.querySelector('#mouth');
-    const waveformContainer = document.querySelector('#waveform');
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    let recognition = null;
-    let isListening = false;
-    let isProcessing = false;
-    let messageCount = 0;
-    let refreshPending = false;
-    
-    function getTimeString() {
-      const now = new Date();
-      return now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    }
-    
-    function addMessage(label, text, isUser = false) {
-      messageCount++;
-      const type = isUser ? 'user' : 'ai';
-      const labelText = isUser ? 'YOU' : 'JARVIS';
-      const entry = document.createElement('div');
-      entry.className = 'message ' + type;
-      const heading = document.createElement('div');
-      heading.className = 'message-label';
-      heading.textContent = '[' + getTimeString() + ' / ' + labelText + ']';
-      const content = document.createElement('div');
-      content.className = 'message-text';
-      content.textContent = text;
-      entry.append(heading, content);
-      transcript.appendChild(entry);
-      document.querySelector('#message-count').textContent = messageCount;
-      transcript.scrollTop = transcript.scrollHeight;
-    }
-    
-    function setListening(value) {
-      isListening = value;
-      facePanel.classList.toggle('listening', value);
-      if (!isProcessing) faceStatus.textContent = value ? 'Listening to you' : 'Ready to listen';
-      if (value) createWaveform();
-      else clearWaveform();
-    }
-    
-    function setProcessing() {
-      isProcessing = true;
-      facePanel.classList.remove('listening');
-      facePanel.classList.add('processing');
-      faceStatus.textContent = 'Thinking';
-      mouth.classList.remove('speaking');
-      mouth.classList.add('speaking-active');
-      clearWaveform();
-    }
-    
-    function resetFace() {
-      isProcessing = false;
-      facePanel.classList.remove('listening', 'processing');
-      faceStatus.textContent = 'Ready';
-      mouth.classList.remove('speaking', 'speaking-active');
-      clearWaveform();
-    }
-    
-    function createWaveform() {
-      clearWaveform();
-      for (let i = 0; i < 20; i++) {
-        const bar = document.createElement('div');
-        bar.className = 'wave-bar';
-        bar.style.animationDelay = (i * 0.05) + 's';
-        if (Math.random() > 0.3) bar.classList.add('active');
-        waveformContainer.appendChild(bar);
-      }
-    }
-    
-    function clearWaveform() {
-      waveformContainer.innerHTML = '';
-    }
-    
-    async function refresh() {
-      if (refreshPending) return;
-      refreshPending = true;
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000);
-      try {
-        
-        const [statusResponse, taskResponse] = await Promise.all([
-          fetch('/status', { signal: controller.signal }),
-          fetch('/tasks', { signal: controller.signal })
-        ]);
-        
-        if (!statusResponse.ok || !taskResponse.ok) {
-          throw new Error('API error');
-        }
-        
-        const status = await statusResponse.json();
-        const tasks = await taskResponse.json();
-        statusLabel.textContent = status.status === 'online' ? 'System online' : 'Offline';
-        statusLabel.dataset.state = status.status;
-        if (!isListening && !isProcessing && !(currentAudio && !currentAudio.paused)) {
-          faceStatus.textContent = status.status === 'online' ? (SpeechRecognition ? 'Ready to listen' : 'No voice support') : 'Disconnected';
-        }
-        document.querySelector('#model').textContent = status.model || '--';
-        
-        // CPU metric with progress bar
-        const cpuValue = status.hardware && status.hardware.cpu && status.hardware.cpu[0] && status.hardware.cpu[0].LoadPercentage;
-        const cpuDisplay = cpuValue == null ? 'Ready' : `${cpuValue}%`;
-        document.querySelector('#cpu').textContent = cpuDisplay;
-        document.querySelector('#cpu-bar').style.width = (cpuValue || 0) + '%';
-        
-        // RAM metric with progress bar
-        const ramPercent = status.hardware && status.hardware.ram_total_bytes 
-          ? Math.round((1 - status.hardware.ram_free_bytes / status.hardware.ram_total_bytes) * 100)
-          : null;
-        const ramDisplay = ramPercent == null ? 'Ready' : `${ramPercent}%`;
-        document.querySelector('#ram').textContent = ramDisplay;
-        document.querySelector('#ram-bar').style.width = (ramPercent || 0) + '%';
-        
-        document.querySelector('#gpu').textContent = status.hardware && status.hardware.gpu_metrics && status.hardware.gpu_metrics.available ? 'Ready' : 'N/A';
-        document.querySelector('#voice').textContent = status.voice_ready ? 'Ready' : 'Check';
-        document.querySelector('#task-count').textContent = tasks.length;
-        document.querySelector('#tasks').innerHTML = tasks.length 
-          ? tasks.map(task => `<div class="task">${task.title}<br><div class="task-time">${task.due_at || 'No due time'}</div></div>`).join('') 
-          : '<div class="task">No open tasks</div>';
-      } catch (error) {
-        console.log('Status check failed:', error.message);
-        statusLabel.textContent = 'Offline';
-        statusLabel.dataset.state = 'offline';
-        faceStatus.textContent = 'Disconnected';
-      } finally {
-        clearTimeout(timeoutId);
-        refreshPending = false;
-      }
-    }
-    
-    let currentAudio = null;
-    let currentAudioUrl = null;
-    let speechRequest = null;
-    async function playPiperReply(text) {
-      if (speechRequest) speechRequest.abort();
-      if (currentAudio) { currentAudio.pause(); currentAudio.remove(); }
-      if (currentAudioUrl) URL.revokeObjectURL(currentAudioUrl);
-      mouth.classList.remove('speaking');
-      const controller = new AbortController();
-      speechRequest = controller;
-      const timeout = setTimeout(() => controller.abort(), 120000);
-      try {
-        const result = await fetch('/speech', {
-          method: 'POST', headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({text}), signal: controller.signal
-        });
-        if (!result.ok) {
-          let detail = 'Piper speech is unavailable. Restart the dashboard server after updating.';
-          try { const data = await result.json(); if (typeof data.detail === 'string') detail = data.detail; } catch {}
-          throw new Error(detail);
-        }
-        const blob = await result.blob();
-        if (controller.signal.aborted) return;
-        currentAudioUrl = URL.createObjectURL(blob);
-        const audio = document.createElement('audio');
-        currentAudio = audio;
-        audio.src = currentAudioUrl;
-        audio.controls = false;
-        audio.onplay = () => { mouth.classList.add('speaking'); facePanel.classList.add('speaking'); faceStatus.textContent = 'Speaking'; };
-        audio.onpause = audio.onended = audio.onerror = () => { mouth.classList.remove('speaking'); facePanel.classList.remove('speaking'); if (!isProcessing && !isListening) faceStatus.textContent = 'Ready to listen'; };
-        try { await audio.play(); }
-        catch { document.querySelector('#voice-hint').textContent = 'Automatic voice playback was blocked. Allow sound for this site in your browser.'; }
-      } catch (error) {
-        if (controller !== speechRequest) return;
-        addMessage('JARVIS', error.name === 'AbortError' ? 'Voice generation timed out. Your text reply is still available.' : error.message);
-      } finally {
-        clearTimeout(timeout);
-      }
-    }
+// Construct Markdown nodes directly; model output is never inserted as HTML.
+function inline(parent,text){
+ const parts=text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
+ for(const part of parts){const tag=part.startsWith('**')&&part.endsWith('**')?'strong':part.startsWith('`')&&part.endsWith('`')?'code':null;
+ if(tag){const el=document.createElement(tag);el.textContent=part.slice(tag==='strong'?2:1,tag==='strong'?-2:-1);parent.append(el);}else parent.append(document.createTextNode(part));}
+}
+function markdown(parent,text){
+ let list=null,pre=null;
+ for(const line of text.split('\n')){
+  if(line.startsWith('```')){if(pre){pre=null;}else{pre=document.createElement('pre');parent.append(pre);}list=null;continue;}
+  if(pre){pre.textContent+=line+'\n';continue;}
+  if(!line.trim()){list=null;continue;}
+  const item=line.match(/^\s*(?:([-*]) |(\d+)\. )(.*)$/);
+  if(item){const tag=item[2]?'ol':'ul';if(!list||list.tagName.toLowerCase()!==tag){list=document.createElement(tag);parent.append(list);}const li=document.createElement('li');inline(li,item[3]);list.append(li);continue;}
+  list=null;const heading=line.match(/^#{1,6}\s+(.*)$/);const el=document.createElement(heading?'h3':'p');inline(el,heading?heading[1]:line);parent.append(el);
+ }
+}
+function message(text,user=false,seconds=null){
+ const entry=document.createElement('div');entry.className='message '+(user?'user':'ai');
+ const label=document.createElement('div');label.className='message-label';label.textContent=(user?'YOU':'JARVIS')+' / '+new Date().toLocaleTimeString('en-GB', {timeZone: TIME_ZONE});
+ const body=document.createElement('div');body.className='message-text';if(user){body.textContent=text;}else markdown(body,text);
+ entry.append(label,body);if(seconds!==null){const timing=document.createElement('div');timing.className='reply-duration';timing.textContent='Reply in '+seconds+' s';entry.append(timing);}
+ transcript.append(entry);$('#message-count').textContent=++count;transcript.scrollTop=transcript.scrollHeight;return entry;
+}
+function getContext(){if(!audioContext){const Context=window.AudioContext||window.webkitAudioContext;if(!Context)throw Error('Audio visualization is unavailable in this browser.');audioContext=new Context();}return audioContext;}
+function unlockAudio(){try{getContext().resume().catch(()=>{});}catch{}}
+function speechText(text){return text
+ .replace(/```[\s\S]*?```/g,block=>block.replace(/^```[^\n]*\n?|```$/g,''))
+ .replace(/!\[([^\]]*)\]\([^)]*\)/g,'$1')
+ .replace(/\[([^\]]+)\]\([^)]*\)/g,'$1')
+ .replace(/^\s{0,3}#{1,6}\s+/gm,'')
+ .replace(/^\s*(?:[-+*]|\d+[.)])\s+/gm,'')
+ .replace(/[*_~`>|\\]/g,'')
+ .replace(/[\p{Extended_Pictographic}\p{Emoji_Presentation}\u200d\ufe0f\u20e3]/gu,' ')
+ .replace(/\s+([,.;:!?])/g,'$1').replace(/\s{2,}/g,' ').trim();}
+function setMouth(level){$('#avatar').dataset.mouth=!speaking||level<.06?'rest':level<.22?'small':level<.48?'medium':level<.75?'round':'wide';}
+function stopMeter(){setMouth(0);cancelAnimationFrame(frame);if(meterSource){meterSource.disconnect();meterSource=null;}panel.style.setProperty('--voice-level','0');panel.style.setProperty('--voice-glow','25px');$('#mic-meter').value=0;}
+function analyze(source,mic=false){
+ stopMeter();meterSource=source;const analyser=getContext().createAnalyser();analyser.fftSize=256;source.connect(analyser);if(!mic)analyser.connect(audioContext.destination);
+ const samples=new Uint8Array(analyser.fftSize);
+ function tick(){analyser.getByteTimeDomainData(samples);let sum=0;for(const value of samples)sum+=((value-128)/128)**2;const level=Math.min(1,Math.sqrt(sum/samples.length)*5);
+ panel.style.setProperty('--voice-level',String(level));panel.style.setProperty('--voice-glow',(25+level*75)+'px');if(mic)$('#mic-meter').value=level;else setMouth(level);frame=requestAnimationFrame(tick);}tick();
+}
+function stopVoice(){if(speechController)speechController.abort();speechController=null;if(audio){audio.pause();audio.src='';audio=null;}if(audioUrl)URL.revokeObjectURL(audioUrl);audioUrl=null;preparing=false;speaking=false;setMouth(0);stopMeter();paint();scheduleWakeListening();}
+async function speak(text){
+ stopVoice();const spoken=speechText(text);if(muted||!spoken)return;preparing=true;paint();const controller=new AbortController();speechController=controller;
+ const timeout=setTimeout(()=>controller.abort(),120000);
+ try{
+  const response=await fetch('/speech',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:spoken}),signal:controller.signal});
+  if(!response.ok){let detail='Piper speech unavailable';try{detail=(await response.json()).detail||detail;}catch{}throw Error(detail);}
+  const blob=await response.blob();if(controller!==speechController||muted)return;
+  audioUrl=URL.createObjectURL(blob);audio=new Audio(audioUrl);
+  try{await getContext().resume();analyze(audioContext.createMediaElementSource(audio));}catch{$('#voice-hint').textContent='Voice playback available; audio visualization unavailable.';}
+  audio.onplaying=()=>{preparing=false;speaking=true;paint();};
+  audio.onended=()=>{stopVoice();};audio.onerror=()=>{stopVoice();$('#voice-hint').textContent='Voice playback failed.';};
+  await audio.play();
+ }catch(error){if(controller!==speechController)return;stopVoice();$('#voice-hint').textContent=error.name==='NotAllowedError'?'Allow automatic sound in your browser settings.':error.name==='AbortError'?'Voice generation timed out.':error.message;}
+ finally{clearTimeout(timeout);}
+}
+function clearWakeArm(){wakeArmed=false;if(wakeTimer)clearTimeout(wakeTimer);wakeTimer=null;paint();}
+function extractWakeCommand(text){const match=text.trim().match(/^(?:(?:hey|hi|okay|ok)\s+)?jarvis\b[\s,.:;-]*(.*)$/i);return match?match[1].trim():null;}
+function pauseWakeListening(){if(recognitionRestart)clearTimeout(recognitionRestart);recognitionRestart=null;if(recognitionRunning){try{recognition.abort();}catch{}}recognitionRunning=false;listening=false;paint();}
+function scheduleWakeListening(delay=450){
+ if(recognitionRestart)clearTimeout(recognitionRestart);if(!micEnabled||!recognition||busy||preparing||speaking)return;
+ recognitionRestart=setTimeout(()=>{recognitionRestart=null;beginWakeListening();},delay);
+}
+function setWorkspaceView(view='dashboard'){
+ const workspace=$('.workspace');workspace.dataset.view=view;
+ if(view==='output')$('#output-panel').hidden=false;
+ if(view==='dashboard')$('#output-panel').hidden=true;
+}
+function showTextOutput(title,text,status='Complete',keepPreview=false){
+ if(!keepPreview){const preview=$('#output-preview');preview.replaceChildren();const mark=document.createElement('div');mark.className='output-file';const icon=document.createElement('span');icon.textContent='✦';mark.append(icon);preview.append(mark);if(attachmentPreviewUrl)URL.revokeObjectURL(attachmentPreviewUrl);attachmentPreviewUrl=null;}
+ $('#output-title').textContent=title;$('#output-status').textContent=status;const answer=$('#output-answer');answer.replaceChildren();markdown(answer,text);setWorkspaceView('output');
+}
+function showAttachmentPreview(file){
+ const preview=$('#output-preview');preview.replaceChildren();if(attachmentPreviewUrl)URL.revokeObjectURL(attachmentPreviewUrl);attachmentPreviewUrl=null;
+ if(file.type?.startsWith('image/')){attachmentPreviewUrl=URL.createObjectURL(file);const image=document.createElement('img');image.src=attachmentPreviewUrl;image.alt='Preview of '+file.name;preview.append(image);}
+ else{const card=document.createElement('div');card.className='output-file';const icon=document.createElement('span');icon.textContent='◇';const name=document.createElement('div');name.textContent=file.name;card.append(icon,name);preview.append(card);}
+ $('#output-title').textContent=file.name;$('#output-status').textContent='Attached · waiting for your question';const answer=$('#output-answer');answer.replaceChildren();const hint=document.createElement('p');hint.className='empty';hint.textContent='Ask what you want to know about this file, then press Send.';answer.append(hint);setWorkspaceView('output');
+}
+async function beginWakeListening(){
+ if(!micEnabled||!recognition||recognitionRunning||busy||preparing||speaking||micStarting)return;unlockAudio();micStarting=true;paint();
+ try{if(!micStream){const stream=await navigator.mediaDevices.getUserMedia({audio:true});if(!micEnabled){stream.getTracks().forEach(track=>track.stop());micStarting=false;return;}micStream=stream;}if(!micEnabled||busy||preparing||speaking){micStarting=false;return;}analyze(getContext().createMediaStreamSource(micStream),true);recognition.start();}
+ catch(error){micStarting=false;if(!micEnabled)return;if(error.name==='InvalidStateError'){scheduleWakeListening(700);return;}micEnabled=false;releaseMic();$('#voice-hint').textContent='Enable microphone permission to use “Hey Jarvis.”';}
+}
+function releaseMic(){pauseWakeListening();if(micStream)micStream.getTracks().forEach(track=>track.stop());micStream=null;micStarting=false;clearWakeArm();stopMeter();$('#mic-state').textContent='Off';paint();}
+function startMic(){if(!recognition)return;if(micEnabled){micEnabled=false;releaseMic();$('#voice-hint').textContent='Wake-word microphone is off.';}else{micEnabled=true;$('#mic-state').textContent='Starting';$('#voice-hint').textContent='Say “Hey Jarvis” followed by your command';beginWakeListening();}paint();}
+if(recognition){recognition.lang='en-US';recognition.interimResults=false;recognition.continuous=true;
+ recognition.onstart=()=>{recognitionRunning=true;listening=true;micStarting=false;$('#mic-state').textContent=wakeArmed?'Command':'Wake';$('#voice-hint').textContent=wakeArmed?'I’m listening…':'Say “Hey Jarvis” followed by your command';paint();};
+ recognition.onend=()=>{recognitionRunning=false;listening=false;micStarting=false;paint();scheduleWakeListening();};
+ recognition.onerror=event=>{recognitionRunning=false;listening=false;micStarting=false;if(['not-allowed','service-not-allowed'].includes(event.error)){micEnabled=false;releaseMic();$('#voice-hint').textContent='Microphone permission is required for “Hey Jarvis.”';}else if(event.error!=='aborted'&&event.error!=='no-speech'){$('#voice-hint').textContent='Wake microphone: '+event.error;}paint();};
+ recognition.onresult=event=>{for(let index=event.resultIndex;index<event.results.length;index++){if(!event.results[index].isFinal)continue;const text=event.results[index][0].transcript.trim();if(!text)continue;const now=Date.now(),dedupe=text.toLowerCase();if(dedupe===lastWakeText&&now-lastWakeAt<2500)continue;lastWakeText=dedupe;lastWakeAt=now;const command=extractWakeCommand(text);if(command!==null){wakeArmed=true;$('#mic-state').textContent='Command';$('#voice-hint').textContent='I’m listening…';if(wakeTimer)clearTimeout(wakeTimer);wakeTimer=setTimeout(()=>{clearWakeArm();$('#mic-state').textContent='Wake';$('#voice-hint').textContent='Say “Hey Jarvis” followed by your command';},10000);if(command){clearWakeArm();pauseWakeListening();send(command);}else paint();}else if(wakeArmed){clearWakeArm();pauseWakeListening();send(text);}}};
+}else{micEnabled=false;$('#mic-state').textContent='Unavailable';$('#voice-hint').textContent='Browser voice input unavailable. You can still type messages.';}
+async function send(text){
+ if(busy)return;if(attachedFile)return analyzeUpload(attachedFile,text.trim()||'What is this file all about?');if(!text.trim())return;pauseWakeListening();stopVoice();busy=true;activity='Thinking';paint();message(text,true);$('#command-form button[type=submit]').disabled=true;
+ const pending=document.createElement('div');pending.className='pending';pending.setAttribute('role','status');transcript.append(pending);
+ const start=performance.now();const timer=setInterval(()=>{pending.textContent=activity+' \u00b7 '+Math.floor((performance.now()-start)/1000)+' s';},500);
+ const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),120000);
+ try{const data=await requestChat(text,controller.signal);if(!data.response?.trim())throw Error('The model returned an empty reply.');
+ const seconds=((performance.now()-start)/1000).toFixed(1);message(data.response,false,seconds);showTextOutput('JARVIS response',data.response,'Complete · '+seconds+' s');$('#reply-time').textContent='Last reply: '+seconds+' s';busy=false;speak(data.response);
+ }catch(error){message(error.name==='AbortError'?'Reply timed out after two minutes.':error.message).classList.add('error');}
+ finally{busy=false;clearInterval(timer);clearTimeout(timeout);pending.remove();$('#command-form button[type=submit]').disabled=false;paint();scheduleWakeListening();dashboardData();}
+}
+function attachUpload(file){
+ if(!file||busy)return;if(file.size<1||file.size>20*1024*1024){$('#voice-hint').textContent='Choose a file between 1 byte and 20 MiB.';return;}
+ attachedFile=file;$('#attachment-name').textContent=file.name;$('#attachment-tray').hidden=false;$('#drop-zone').classList.add('active');showAttachmentPreview(file);$('#command').focus();$('#voice-hint').textContent='Attached '+file.name+'. Add a question, then press Send.';
+}
+function clearAttachment(keepPreview=false){attachedFile=null;$('#attachment-tray').hidden=true;$('#attachment-name').textContent='';$('#drop-zone').classList.remove('active');$('#file-upload').value='';if(!keepPreview){if(attachmentPreviewUrl)URL.revokeObjectURL(attachmentPreviewUrl);attachmentPreviewUrl=null;setWorkspaceView('dashboard');}}
+async function analyzeUpload(file,question){
+ pauseWakeListening();stopVoice();busy=true;activity='Analyzing '+file.name;paint();message(question+' ['+file.name+']',true);$('#output-status').textContent='Analyzing';const answer=$('#output-answer');answer.replaceChildren();const outputPending=document.createElement('div');outputPending.className='pending';outputPending.textContent='Reading and analyzing '+file.name+'…';answer.append(outputPending);setWorkspaceView('output');$('#command-form button[type=submit]').disabled=true;
+ const pending=document.createElement('div');pending.className='pending';pending.setAttribute('role','status');pending.textContent='Reading '+file.name+'…';transcript.append(pending);
+ const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),analysisTimeoutMs);
+ try{const data=await requestUpload(file,question,controller.signal);if(!data.answer?.trim())throw Error('The model returned an empty file analysis.');message(data.answer);showTextOutput('Analysis · '+file.name,data.answer,'Complete',true);clearAttachment(true);busy=false;speak(data.answer);}
+ catch(error){const detail=error.name==='AbortError'?'File analysis timed out after '+Math.round(analysisTimeoutMs/60000)+' minutes.':error.message;message(detail).classList.add('error');showTextOutput('Analysis · '+file.name,detail,'Failed',true);}
+ finally{busy=false;clearTimeout(timeout);pending.remove();$('#command-form button[type=submit]').disabled=false;paint();scheduleWakeListening();}
+}
+let refreshing=false;
+async function refresh(){if(refreshing)return;refreshing=true;
+ try{const data=await request('/status',{signal:AbortSignal.timeout(15000)});online=true;$('#model').textContent=data.model||'No model';
+ const hw=data.hardware||{};const cpu=hw.cpu?.[0]?.LoadPercentage;$('#cpu').textContent=cpu==null?'Unavailable':cpu+'%';
+ $('#ram').textContent=hw.ram_total_bytes?Math.round((1-hw.ram_free_bytes/hw.ram_total_bytes)*100)+'%':'Unavailable';$('#gpu').textContent=hw.gpu_metrics?.available?'Available':'Unavailable';$('#voice').textContent=data.voice_ready?'Ready':'Unavailable';
+ }catch{online=false;$('#model-connection').textContent='Dashboard offline';}finally{refreshing=false;paint();}}
+let pollingRuntime=false;
+async function runtime(){if(pollingRuntime)return;pollingRuntime=true;try{const data=await request('/runtime',{signal:AbortSignal.timeout(5000)});if(Number.isFinite(data.timeout_seconds)&&data.timeout_seconds>0)analysisTimeoutMs=(data.timeout_seconds+15)*1000;$('#model-connection').textContent='Ollama: '+data.connection;$('#system-state').textContent='Ollama: '+data.connection;$('#system-state').dataset.state=data.connection==='ready'?'online':'offline';$('#voice-name').textContent=(data.voice||'Unknown voice').replace(/^en_US-/, '').replace(/-medium$/, '')+' \u00b7 '+data.engine+(data.voice_enabled?'':' (disabled)');}catch{$('#system-state').textContent='Model status unavailable';$('#system-state').dataset.state='offline';}finally{pollingRuntime=false;}}
+let pollingActivity=false;
+async function pollActivity(){if(!busy||pollingActivity)return;pollingActivity=true;try{const data=await request('/activity',{signal:AbortSignal.timeout(2000)});if(busy&&data.state!=='Ready'){activity=data.state;paint();}}catch{}finally{pollingActivity=false;}}
+$('#command-form').addEventListener('submit',event=>{event.preventDefault();const input=$('#command');if((!input.value.trim()&&!attachedFile)||busy)return;unlockAudio();send(input.value);input.value='';});
+$('#file-upload').addEventListener('change',event=>attachUpload(event.target.files[0]));
+$('#remove-attachment').addEventListener('click',clearAttachment);
+$('#close-output').addEventListener('click',()=>setWorkspaceView('dashboard'));
+let dragDepth=0;
+window.addEventListener('dragenter',event=>{if(event.dataTransfer?.types?.includes('Files')){event.preventDefault();dragDepth++;document.body.classList.add('dragging');}});
+window.addEventListener('dragover',event=>{if(event.dataTransfer?.types?.includes('Files'))event.preventDefault();});
+window.addEventListener('dragleave',()=>{dragDepth=Math.max(0,dragDepth-1);if(!dragDepth)document.body.classList.remove('dragging');});
+window.addEventListener('drop',event=>{event.preventDefault();dragDepth=0;document.body.classList.remove('dragging');const files=event.dataTransfer?.files;if(files?.length){if(files.length>1)$('#voice-hint').textContent='Attached the first dropped file; add files one at a time.';attachUpload(files[0]);}});
+$('#talk-button').addEventListener('click',startMic);$('.face-stage').addEventListener('click',()=>{if(!micEnabled)startMic();});
+$('#stop-voice').addEventListener('click',stopVoice);$('#mute').addEventListener('click',()=>{muted=!muted;$('#mute').setAttribute('aria-pressed',String(muted));$('#mute').textContent=muted?'Unmute':'Mute';if(muted)stopVoice();else unlockAudio();});
+document.addEventListener('keydown',event=>{if(event.code==='Space'&&!['INPUT','TEXTAREA','BUTTON','SUMMARY'].includes(event.target.tagName)){event.preventDefault();startMic();}});
+window.addEventListener('pagehide',()=>{micEnabled=false;stopVoice();releaseMic();if(attachmentPreviewUrl)URL.revokeObjectURL(attachmentPreviewUrl);if(audioContext)audioContext.close();});
+function clock(){$('#clock').textContent=new Date().toLocaleTimeString('en-GB', {timeZone: TIME_ZONE}) + ' UTC+8';}clock();setInterval(clock,1000);refresh();runtime();setInterval(refresh,10000);setInterval(runtime,10000);setInterval(pollActivity,500);paint();if(recognition)setTimeout(beginWakeListening,350);
 
-    async function sendVoiceMessage(message) {
-      if (!message.trim() || isProcessing) return;
-      addMessage('YOU', message, true);
-      const pending = document.createElement('div');
-      pending.className = 'pending';
-      pending.setAttribute('role', 'status');
-      pending.textContent = 'JARVIS is thinking?';
-      transcript.appendChild(pending);
-      transcript.scrollTop = transcript.scrollHeight;
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 120000);
-      const slow = setTimeout(() => { pending.textContent = 'Still working ? the local model may be warming up?'; }, 10000);
-      const send = document.querySelector('#command-form button[type="submit"]');
-      send.disabled = true;
-      try {
-        setProcessing();
-        const result = await fetch('/chat', {
-          method: 'POST', headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({message}), signal: controller.signal
-        });
-        const raw = await result.text();
-        let data;
-        try { data = JSON.parse(raw); } catch { throw new Error('The chat service returned an unreadable reply (HTTP ' + result.status + ').'); }
-        if (!result.ok) throw new Error(typeof data.detail === 'string' ? data.detail : 'Chat request failed (HTTP ' + result.status + ').');
-        if (!data.response || !data.response.trim()) throw new Error('The model returned an empty reply. Please try again.');
-        addMessage('JARVIS', data.response);
-        playPiperReply(data.response);
-
-      } catch (error) {
-        addMessage('JARVIS', error.name === 'AbortError'
-          ? 'The reply took longer than two minutes. Check Ollama before trying again.'
-          : (error.message || 'Cannot reach the chat service.'));
-        transcript.lastElementChild.classList.add('error');
-      } finally {
-        clearTimeout(timeout); clearTimeout(slow); pending.remove();
-        send.disabled = false;
-        resetFace(); refresh();
-      }
-    }
-
-    if (SpeechRecognition) {
-      recognition = new SpeechRecognition();
-      recognition.lang = 'en-US';
-      recognition.continuous = false;
-      recognition.interimResults = false;
-      
-      recognition.onstart = () => setListening(true);
-      recognition.onend = () => setListening(false);
-      recognition.onerror = (event) => {
-        console.error('Speech recognition error:', event.error);
-        addMessage('JARVIS', `Voice error: ${event.error}`, false);
-        setListening(false);
-      };
-      recognition.onresult = (event) => {
-        const transcript_text = event.results[0][0].transcript;
-        setListening(false);
-        sendVoiceMessage(transcript_text);
-      };
-      
-      // Make face clickable for voice
-      const faceStage = document.querySelector('.face-stage');
-      faceStage.style.cursor = 'pointer';
-      faceStage.addEventListener('click', () => {
-        if (!isListening && !isProcessing) {
-          recognition.start();
-        }
-      });
-      document.querySelector('#talk-button').addEventListener('click', () => {
-        if (!isListening && !isProcessing) recognition.start();
-      });
-    } else {
-      faceStatus.textContent = 'No voice support';
-      document.querySelector('#talk-button').disabled = true;
-      document.querySelector('#voice-hint').textContent = 'Browser voice input is unavailable. Use the terminal voice assistant.';
-    }
-    
-    // Fast initial connection with aggressive retries
-    let connectionAttempts = 0;
-    async function tryConnect() {
-      connectionAttempts++;
-      console.log(`Connection attempt ${connectionAttempts}...`);
-      await refresh();
-      
-      const isOnline = statusLabel.textContent === 'System online';
-      if (!isOnline && connectionAttempts < 15) {
-        // Retry quickly: 500ms, then 600ms, then 800ms
-        const delay = connectionAttempts < 5 ? 500 : connectionAttempts < 10 ? 600 : 800;
-        setTimeout(tryConnect, delay);
-      } else if (isOnline) {
-        console.log('✅ Connected to JARVIS');
-      } else {
-        console.error('❌ Could not connect after 15 attempts');
-      }
-    }
-    
-    // Start connection attempt immediately
-    tryConnect();
-    
-    // Normal polling once connected
-    setInterval(refresh, 2000);
-    
-    // Optional: Add keyboard shortcut (spacebar to listen)
-    document.addEventListener('keydown', (e) => {
-      if (e.code === 'Space' && !['BUTTON', 'INPUT', 'TEXTAREA'].includes(e.target.tagName) && recognition && !isListening && !isProcessing) {
-        e.preventDefault();
-        recognition.start();
-      }
-    });
-  
-    document.querySelector('#command-form').addEventListener('submit', event => {
-      event.preventDefault();
-      const input = document.querySelector('#command');
-      if (!input.value.trim() || isProcessing) return;
-      sendVoiceMessage(input.value);
-      input.value = '';
-    });
-    function updateClock() {
-      document.querySelector('#clock').textContent = new Date().toLocaleTimeString('en-GB');
-    }
-    updateClock();
-    setInterval(updateClock, 1000);
-</script>
-</body>
-</html>
+let dashboardPolling=false;
+function taskRows(target,items,empty){
+ target.replaceChildren();
+ if(!items.length){const note=document.createElement('p');note.className='empty';note.textContent=empty;target.append(note);return;}
+ for(const item of items){const row=document.createElement('div');row.className='task-row';const dot=document.createElement('span');dot.className='task-dot';const content=document.createElement('div');content.textContent=item.title;const due=document.createElement('small');const date=item.due_at?new Date(item.due_at):null;due.textContent=date&&!Number.isNaN(date.getTime())?date.toLocaleString([], {timeZone: TIME_ZONE, month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):'No due date';content.append(due);row.append(dot,content);target.append(row);}
+}
+async function dashboardData(){
+ if(dashboardPolling)return;dashboardPolling=true;
+ try{const data=await request('/memory',{signal:AbortSignal.timeout(5000)});const tasks=data.tasks||[];$('#task-count').textContent=tasks.length;taskRows($('#tasks'),tasks,'A little breathing room. No open tasks yet.');
+ const now=new Date();const today=tasks.filter(task=>task.due_at&&dayKey(new Date(task.due_at))===dayKey(now)).sort((a,b)=>new Date(a.due_at)-new Date(b.due_at));
+ $('#today-count').textContent=today.length+' scheduled';taskRows($('#schedule'),today,'Your day is clear. Add a task with a due time to see it here.');
+ const memory=$('#memory-list');memory.replaceChildren();const memories=data.memories||[];
+ if(!memories.length){const note=document.createElement('p');note.className='empty';note.textContent='The things you ask me to remember will live here.';memory.append(note);}
+ for(const item of memories.slice(0,8)){const row=document.createElement('div');row.className='memory-item';row.textContent=item.content;memory.append(row);}
+ }catch{$('#schedule').textContent='Schedule unavailable.';$('#tasks').textContent='Tasks unavailable.';$('#memory-list').textContent='Memory unavailable.';}finally{dashboardPolling=false;}
+}
+let approvalPolling=false, approvalSignature='';
+async function pollApprovals(){
+ if(approvalPolling)return;approvalPolling=true;
+ try{const pending=await request('/approvals',{signal:AbortSignal.timeout(4000)});if(!Array.isArray(pending))return;
+ const signature=JSON.stringify(pending);if(signature===approvalSignature)return;approvalSignature=signature;
+ const list=$('#approval-list');list.replaceChildren();$('#approval-panel').hidden=!pending.length;
+ for(const item of pending){const row=document.createElement('div');const title=document.createElement('p');title.textContent=item.tool;const details=document.createElement('pre');details.style.whiteSpace='pre-wrap';details.style.overflowWrap='anywhere';details.textContent=JSON.stringify(item.details,null,2);row.append(title,details);
+ for(const [label,approved] of [['Allow',true],['Deny',false]]){const button=document.createElement('button');button.textContent=label;button.style.padding='12px 20px';button.addEventListener('click',async()=>{button.disabled=true;try{await request('/approvals/'+encodeURIComponent(item.id),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({approved})});approvalSignature='';await pollApprovals();}catch(error){button.disabled=false;$('#voice-hint').textContent=error.message;}});row.append(button);}list.append(row);}
+ }catch{approvalSignature='';$('#approval-list').textContent='Approval connection unavailable. Actions will time out without approval.';}finally{approvalPolling=false;}
+}
+let automationPolling=false;
+async function pollAutomations(){
+ if(automationPolling)return;automationPolling=true;
+ try{const data=await request('/automations',{signal:AbortSignal.timeout(4000)});const list=$('#automation-list');list.replaceChildren();
+ for(const job of data.jobs||[]){const row=document.createElement('div');row.className='memory-item';row.textContent='#'+job.id+' '+job.title+' — '+job.status+' — '+new Date(job.due_at).toLocaleString();list.append(row);}if(!(data.jobs||[]).length)list.textContent='No automations yet.';
+ const events=$('#automation-events');events.replaceChildren();for(const event of (data.events||[]).slice(0,5)){const row=document.createElement('div');row.className='memory-item';row.textContent=event.title+': '+(event.result.state|| (event.result.ok?'Completed':event.result.error||'Failed'));events.append(row);}
+ }catch{$('#automation-list').textContent='Automation status unavailable.';}finally{automationPolling=false;}
+}
+function welcome(){const now=new Date();const hour=Number(new Intl.DateTimeFormat('en-GB',{timeZone:TIME_ZONE,hour:'numeric',hourCycle:'h23'}).format(now));$('#greeting').textContent=hour<12?'Good morning.':hour<18?'Good afternoon.':'Good evening.';$('#today-date').textContent=now.toLocaleDateString([], {timeZone: TIME_ZONE, weekday:'short',month:'short',day:'numeric',year:'numeric'});}
+document.querySelectorAll('[data-prompt]').forEach(button=>button.addEventListener('click',()=>{$('#command').value=button.dataset.prompt;$('#command').focus();}));
+document.querySelectorAll('.nav a').forEach(link=>link.addEventListener('click',()=>{document.querySelectorAll('.nav a').forEach(item=>item.classList.remove('active'));link.classList.add('active');const target=link.getAttribute('href');if(target==='#tasks-panel')setWorkspaceView('tasks');else if(target==='#home')setWorkspaceView('dashboard');else if(target==='#system-panel'){$('#system-panel').open=true;setWorkspaceView('dashboard');}else setWorkspaceView('dashboard');}));
+welcome();dashboardData();setInterval(dashboardData,15000);setInterval(welcome,60000);
+pollApprovals();pollAutomations();setInterval(pollApprovals,1000);setInterval(pollAutomations,10000);
+</script></body></html>

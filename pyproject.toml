@@ -4,12 +4,17 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "jarvis-local"
-version = "1.4.0"
-description = "A local-first terminal assistant powered by Ollama."
+version = "2.0.0"
+description = "A local-first voice, automation, and vision assistant powered by Ollama."
 requires-python = ">=3.10"
 dependencies = []
 
 [project.optional-dependencies]
+vision = [
+    "Pillow>=10.4",
+    "PyAutoGUI>=0.9.54",
+    "opencv-python>=4.10",
+]
 voice = [
 	"faster-whisper>=1.1",
 	"numpy>=1.26",
@@ -24,6 +29,7 @@ voice-output = [
 wake-word = [
 	"numpy>=1.26",
 	"openwakeword>=0.6",
+	"scikit-learn>=1.5,<2",
 	"sounddevice>=0.5",
 ]
 dashboard = [
@@ -39,6 +45,9 @@ rag = [
 
 [tool.setuptools.packages.find]
 include = ["jarvis*"]
+
+[tool.setuptools.package-data]
+"jarvis.api" = ["ui/*.html", "ui/avatar-*.png", "ui/portrait*.png"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

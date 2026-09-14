@@ -1,5 +1,6 @@
 import json
 import unittest
+from urllib.error import URLError
 from urllib.request import Request
 
 from jarvis.llm import OllamaClient, OllamaError
@@ -35,6 +36,20 @@ class FakeStreamResponse:
 
 
 class OllamaClientTests(unittest.TestCase):
+    def test_connection_timeout_is_not_reported_as_ollama_offline(self) -> None:
+        for failure in (TimeoutError(), URLError(TimeoutError())):
+            with self.subTest(failure=type(failure).__name__):
+                client = OllamaClient("http://localhost:11434", "test", timeout_seconds=600,
+                                      request_fn=lambda *args, **kwargs: (_ for _ in ()).throw(failure))
+                with self.assertRaisesRegex(OllamaError, "timed out after 600 seconds"):
+                    client.chat([])
+
+    def test_connection_reset_has_actionable_resource_message(self) -> None:
+        client = OllamaClient("http://localhost:11434", "test",
+                              request_fn=lambda *args, **kwargs: (_ for _ in ()).throw(ConnectionResetError()))
+        with self.assertRaisesRegex(OllamaError, "RAM/VRAM"):
+            client.chat([])
+
     def test_structured_tool_calls_and_request_schemas(self):
         captured = {}
         call = {'function': {'name': 'get_time', 'arguments': {}}}

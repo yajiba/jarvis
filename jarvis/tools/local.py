@@ -32,7 +32,8 @@ def create_local_tools(root: Path, confirm: Callable[[str, dict], bool] | None =
                        memory: MemoryStore | None = None,
                        web: WebClient | None = None,
                        allowed_roots: tuple[Path, ...] | None = None,
-                       knowledge: KnowledgeStore | None = None) -> ToolRegistry:
+                       knowledge: KnowledgeStore | None = None,
+                       automation=None, vision=None, presentations=None) -> ToolRegistry:
     root = root.resolve(strict=True)
     roots = tuple(dict.fromkeys((root, *(allowed_roots or ()))))
     roots = tuple(path.resolve(strict=True) for path in roots)
@@ -256,4 +257,7 @@ def create_local_tools(root: Path, confirm: Callable[[str, dict], bool] | None =
              projects.run_command, 'confirm', projects.preview),
         *create_web_tools(web if web is not None else WebClient()),
         *create_coding_tools(roots, projects, confirm=confirm).tools,
+        *(automation.tools() if automation is not None else []),
+        *(vision.tools() if vision is not None else []),
+        *(presentations.tools() if presentations is not None else []),
     ], confirm=confirm)

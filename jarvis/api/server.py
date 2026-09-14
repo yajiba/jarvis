@@ -4,21 +4,53 @@ from pathlib import Path
 from typing import Any
 from threading import Lock
 from urllib.request import urlopen
+from urllib.parse import unquote
 import json
+from contextlib import asynccontextmanager
 
 from jarvis.memory import MemoryStore
 
 
-def create_app(agent: Any, memory: MemoryStore, settings: Any = None, tools: Any = None):
+def create_app(agent: Any, memory: MemoryStore, settings: Any = None, tools: Any = None,
+               scheduler=None, automation=None, approvals=None, vision=None):
     try:
-        from fastapi import FastAPI, HTTPException
+        from fastapi import FastAPI, HTTPException, Request
         from fastapi.responses import FileResponse, Response
+        from fastapi.staticfiles import StaticFiles
     except ImportError as error:
         raise RuntimeError(
             'Dashboard dependencies are missing. Install with: pip install -e ".[dashboard]"'
         ) from error
 
-    app = FastAPI(title="JARVIS Dashboard", version="1.0")
+    @asynccontextmanager
+    async def lifespan(_app):
+        if scheduler is not None:
+            scheduler.start()
+        try:
+            yield
+        finally:
+            if approvals is not None:
+                approvals.close()
+            if scheduler is not None:
+                from starlette.concurrency import run_in_threadpool
+                await run_in_threadpool(scheduler.stop)
+
+    app = FastAPI(title="JARVIS Dashboard", version="2.0", lifespan=lifespan)
+    from starlette.middleware.trustedhost import TrustedHostMiddleware
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=['localhost','127.0.0.1','[::1]','testserver'])
+
+    @app.middleware('http')
+    async def local_mutations(request, call_next):
+        if request.method not in {'GET','HEAD','OPTIONS'}:
+            origin = request.headers.get('origin')
+            if origin and origin != str(request.base_url).rstrip('/'):
+                return Response('Cross-origin actions are not allowed', status_code=403)
+            content_type = request.headers.get('content-type','').lower()
+            upload = request.url.path == '/analyze-upload' and content_type.startswith('application/octet-stream')
+            if not upload and not content_type.startswith('application/json'):
+                return Response('JSON is required', status_code=415)
+        return await call_next(request)
+    app.mount("/ui", StaticFiles(directory=Path(__file__).parent / "ui"), name="ui")
     ui_path = Path(__file__).parent / "ui" / "index.html"
     from jarvis.voice.tts import PiperSpeaker
     from jarvis.voice.audio import VoiceInputError
@@ -48,7 +80,8 @@ def create_app(agent: Any, memory: MemoryStore, settings: Any = None, tools: Any
             pass
         return {"connection": connection, "model": model,
                 "voice": model_path.stem, "engine": "Piper",
-                "voice_enabled": bool(getattr(settings, "tts_enabled", False))}
+                "voice_enabled": bool(getattr(settings, "tts_enabled", False)),
+                "timeout_seconds": float(getattr(settings, "timeout_seconds", 120.0))}
 
     @app.post("/speech")
     def speech(payload: dict[str, Any]):
@@ -93,6 +126,24 @@ def create_app(agent: Any, memory: MemoryStore, settings: Any = None, tools: Any
     def get_tasks() -> list[dict[str, Any]]:
         return memory.list_tasks()
 
+    @app.get('/automations')
+    def automations():
+        return {'jobs': automation.list_jobs(), 'events': automation.events()} if automation is not None else {'jobs': [], 'events': []}
+
+    @app.get('/approvals')
+    def pending_approvals():
+        return approvals.pending() if approvals is not None else []
+
+    @app.post('/approvals/{approval_id}')
+    def answer_approval(approval_id: str, payload: dict[str, Any]):
+        if approvals is None:
+            raise HTTPException(status_code=503, detail='Approvals are unavailable')
+        try:
+            approvals.answer(approval_id, payload.get('approved'))
+        except ValueError as error:
+            raise HTTPException(status_code=400, detail=str(error)) from error
+        return {'status': 'answered'}
+
     @app.post("/chat")
     def chat(payload: dict[str, Any]) -> dict[str, str]:
         message = payload.get("message")
@@ -108,6 +159,46 @@ def create_app(agent: Any, memory: MemoryStore, settings: Any = None, tools: Any
             activity["state"] = "Ready"
             chat_lock.release()
         return {"response": response}
+
+    @app.post('/analyze-upload')
+    async def analyze_upload(request: Request):
+        from starlette.concurrency import run_in_threadpool
+        from jarvis.api.uploads import (IMAGE_EXTENSIONS, MAX_UPLOAD_BYTES,
+                                        analyze_document, safe_filename)
+        try:
+            length = int(request.headers.get('content-length', '0'))
+        except ValueError as error:
+            raise HTTPException(status_code=400, detail='Invalid upload length') from error
+        if length < 1 or length > MAX_UPLOAD_BYTES:
+            raise HTTPException(status_code=413, detail='Uploads must contain 1 byte to 20 MiB')
+        try:
+            name = safe_filename(unquote(request.headers.get('x-filename', '')))
+        except ValueError as error:
+            raise HTTPException(status_code=400, detail=str(error)) from error
+        question = unquote(request.headers.get('x-question', '')).strip()
+        if not question or len(question) > 1000:
+            raise HTTPException(status_code=400, detail='Upload question must contain 1 to 1000 characters')
+        data = await request.body()
+        if not data or len(data) > MAX_UPLOAD_BYTES:
+            raise HTTPException(status_code=413, detail='Uploads must contain 1 byte to 20 MiB')
+        if not chat_lock.acquire(blocking=False):
+            raise HTTPException(status_code=409, detail='JARVIS is handling another message. Please wait.')
+        try:
+            activity['state'] = 'Analyzing upload'
+            if Path(name).suffix.lower() in IMAGE_EXTENSIONS:
+                if vision is None:
+                    raise HTTPException(status_code=503, detail='Image analysis is unavailable')
+                result = await run_in_threadpool(vision.analyze_image_bytes, name, data, question)
+            else:
+                result = await run_in_threadpool(analyze_document, agent.client, name, data, question)
+        except ValueError as error:
+            raise HTTPException(status_code=400, detail=str(error)) from error
+        except RuntimeError as error:
+            raise HTTPException(status_code=503, detail=str(error)) from error
+        finally:
+            activity['state'] = 'Ready'
+            chat_lock.release()
+        return result
 
     @app.get("/")
     def index():
@@ -126,20 +217,40 @@ def main() -> None:
     from jarvis.config import Settings
 
     settings = Settings.from_environment()
-    memory = MemoryStore(Path("data") / "jarvis.db")
     from jarvis.tools import create_local_tools
     from jarvis.tools.projects import ProjectManager
     from jarvis.tools.web import WebClient
+    from jarvis.rag import KnowledgeStore
     root = Path(__file__).resolve().parents[2]
+    memory = MemoryStore(root / 'data' / 'jarvis.db')
+    knowledge = KnowledgeStore(root / 'data' / 'knowledge.db',
+                               semantic=settings.rag_semantic_enabled)
+    from jarvis.scheduler import TaskScheduler
+    from jarvis.scheduler.automation import Automation
+    from jarvis.tools.vision import Vision
+    from jarvis.api.approvals import ApprovalQueue
+    approvals = ApprovalQueue()
     projects = ProjectManager(root)
+    automation = Automation(root / 'data' / 'automation.db', projects)
+    vision = Vision(settings, (root, *settings.allowed_roots))
+    from jarvis.tools.presentations import Presentations
+    presentations = Presentations((root, *settings.allowed_roots))
     tools = create_local_tools(root, projects=projects, memory=memory,
                                web=WebClient(enabled=settings.web_enabled),
-                               allowed_roots=settings.allowed_roots)
+                               allowed_roots=settings.allowed_roots, knowledge=knowledge,
+                               automation=automation,
+                               vision=vision, presentations=presentations,
+                               confirm=approvals.confirm)
+    coding_client = (OllamaClient(settings.ollama_host, settings.coding_model,
+                                  settings.timeout_seconds)
+                     if settings.coding_model else None)
     agent = Agent(OllamaClient(settings.ollama_host, settings.model, settings.timeout_seconds),
-                  tools=tools, memory=memory)
+                  coding_client=coding_client, tools=tools, memory=memory)
     try:
-        uvicorn.run(create_app(agent, memory, settings, tools), host="127.0.0.1", port=8765)
+        scheduler = TaskScheduler(memory, lambda task: print('JARVIS reminder: ' + task['title']), automation=automation)
+        uvicorn.run(create_app(agent, memory, settings, tools, scheduler, automation, approvals, vision), host="127.0.0.1", port=8765)
     finally:
+        knowledge.close()
         memory.close()
 
 

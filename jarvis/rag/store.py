@@ -19,7 +19,9 @@ class KnowledgeStore:
     def __init__(self, path: Path, semantic: bool = False) -> None:
         self.path = path
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.connection = sqlite3.connect(path)
+        # FastAPI runs synchronous tool handlers in worker threads. The agent's
+        # request lock serializes access, so permit that bounded thread handoff.
+        self.connection = sqlite3.connect(path, check_same_thread=False)
         self.connection.row_factory = sqlite3.Row
         self._semantic = semantic
         self._collection = None

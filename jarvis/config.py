@@ -33,6 +33,9 @@ class Settings:
     ollama_host: str = "http://127.0.0.1:11434"
     model: str = "qwen3:8b"
     coding_model: str | None = None
+    vision_model: str | None = None
+    gui_enabled: bool = False
+    camera_index: int = 0
     timeout_seconds: float = 120.0
     whisper_model: str = "base.en"
     audio_sample_rate: int = 16_000
@@ -82,6 +85,12 @@ class Settings:
         if web_value not in {'1', 'true', 'yes', 'on', '0', 'false', 'no', 'off'}:
             raise ValueError('JARVIS_WEB_ENABLED must be true or false')
         allowed_roots: list[Path] = []
+        gui_value = values.get('JARVIS_GUI_ENABLED', 'false').strip().lower()
+        if gui_value not in {'1','true','yes','on','0','false','no','off'}:
+            raise ValueError('JARVIS_GUI_ENABLED must be true or false')
+        camera_index = int(values.get('JARVIS_CAMERA_INDEX', '0'))
+        if not 0 <= camera_index <= 16:
+            raise ValueError('JARVIS_CAMERA_INDEX must be between 0 and 16')
         for raw_root in values.get('JARVIS_ALLOWED_ROOTS', '').split(';'):
             if not raw_root.strip():
                 continue
@@ -93,6 +102,9 @@ class Settings:
             ollama_host=host,
             model=values.get("JARVIS_MODEL", cls.model),
             coding_model=values.get("JARVIS_CODING_MODEL") or None,
+            vision_model=values.get('JARVIS_VISION_MODEL') or None,
+            gui_enabled=gui_value in {'1','true','yes','on'},
+            camera_index=camera_index,
             timeout_seconds=timeout_seconds,
             whisper_model=values.get("JARVIS_WHISPER_MODEL", cls.whisper_model),
             audio_sample_rate=int(values.get("JARVIS_AUDIO_SAMPLE_RATE", cls.audio_sample_rate)),

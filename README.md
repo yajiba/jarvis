@@ -1,4 +1,4 @@
-# JARVIS v1.4: Knowledge, Dashboard, and Automation
+# JARVIS v2.0: Automation, Vision, and Computer Control
 
 local memory, web intelligence, push-to-talk input, Piper speech output, and
 wake-word detection. Phase 10 combines these capabilities into one voice-agent
@@ -57,20 +57,77 @@ python -m jarvis.api.server
 ```
 
 Open `http://127.0.0.1:8765`. The dashboard exposes local health/status,
-memory, tasks, and chat endpoints and does not bind beyond localhost.
+memory, tasks, automation, vision, approval, and chat controls and does not bind
+beyond localhost. Its animated avatar blinks and uses speech volume to select
+mouth poses from the supplied avatar artwork.
 
 ## Scheduled tasks
 
-Phase 14 runs a lightweight scheduler during the terminal session. Schedule a
-reminder with an ISO-8601 time:
+Phase 14 runs a persistent scheduler in terminal and dashboard sessions. It
+supports reminders, explicitly approved runs of configured project commands,
+and local TCP service monitoring:
 
 ```text
 Schedule a task to check the deployment at 2026-09-11T18:00:00+08:00.
+Schedule the approved jarvis tests command at 2026-09-15T08:00:00+08:00.
+Monitor local TCP port 8765 every 30 seconds and notify me when its state changes.
 ```
 
-Due reminders are marked complete in SQLite and printed by JARVIS. The current
-scheduler supports one-time, daily, and weekly reminders during the session.
-Persistent OS startup and service monitoring remain future improvements.
+Schedules are stored in `data/automation.db`, survive restarts, and run while a
+JARVIS terminal or dashboard process is active. Every command schedule requires
+approval before it is saved; approval covers only the exact configured command.
+Changing that configuration blocks later execution. Failed recurring commands
+stop until investigated and scheduled again. Monitoring checks TCP reachability
+on `127.0.0.1`; it does not restart services or prove application health.
+
+## Vision and GUI assistance
+
+Install the local vision dependencies and select an installed vision-capable
+Ollama model:
+
+```powershell
+pip install -e ".[vision]"
+ollama pull gemma3:4b
+```
+
+```env
+JARVIS_VISION_MODEL=gemma3:4b
+JARVIS_CAMERA_INDEX=0
+JARVIS_GUI_ENABLED=false
+```
+
+`analyze_image` reads PNG, JPEG, and WebP files under approved roots.
+`analyze_screen` and `analyze_camera` require approval before each capture.
+Images are sent only to a loopback Ollama host. GUI control is disabled by
+default; enable it with `JARVIS_GUI_ENABLED=true`. Each click, text entry,
+navigation key, or scroll then requires its own approval and a screen observation
+from the previous 60 seconds. One observation authorizes at most one action.
+
+Phase 16 also understands macro-free PowerPoint lessons. JARVIS can search the
+approved folders for `.pptx` files, extract every slide's text in presentation
+order, and discuss the deck slide by slide. Opening the exact deck in its default
+Windows application requires an explicit dashboard approval. Macro-enabled
+presentations are rejected, and visual slide content is not described unless it
+is separately analyzed with the approved vision workflow.
+
+The dashboard composer and Vision card accept drag-and-drop uploads (or click to
+choose). Selecting a file attaches it without reading it. Add a question such as
+`What can you say about this?` and press Send to start the analysis.
+The right-hand workspace previews attached images and documents, then displays
+the completed analysis. Selecting Tasks in the sidebar opens task management in
+the same full workspace; Home returns to the dashboard cards.
+Supported formats are PNG, JPEG, WebP, UTF-8 text/source files, PDF, DOCX, and
+PPTX, up to 20 MiB. Uploads are analyzed in memory and are not saved by JARVIS.
+Their contents are treated as untrusted data and cannot authorize tools or
+actions. Upload analysis requires a loopback Ollama host so file contents remain
+on this computer.
+
+```text
+Analyze jarvis/api/ui/avatar-body.png and describe the character.
+Analyze my current screen and explain what you see.
+Capture one camera frame and describe the visible hardware.
+Find the PowerPoint for my biology lesson, open it, and discuss each slide.
+```
 
 ## Web intelligence
 
@@ -149,6 +206,8 @@ pip install -e ".[voice-output]"
 pip install -e ".[wake-word]"
 # PDF/DOCX and semantic local retrieval:
 pip install -e ".[rag]"
+# Local image, screenshot, camera, and GUI support:
+pip install -e ".[vision]"
 ```
 
 Start JARVIS:
@@ -256,7 +315,8 @@ Open VS Code.
 Available tools include `get_time`, `get_system_info`, `list_files`, `read_file`,
 `open_folder`, `open_application`, `remember_memory`, `set_preference`,
 `get_preference`, `list_memory`, `add_task`, `schedule_task`, `index_knowledge`,
-and `search_knowledge`. The model selects structured calls,
+`search_knowledge`, `find_presentations`, `inspect_presentation`, and
+`open_presentation`. The model selects structured calls,
 the registry validates and executes them, and the model receives their results
 to compose its reply. This follows [Ollama's tool-calling interface](https://docs.ollama.com/capabilities/tool-calling).
 
@@ -322,6 +382,6 @@ The `Agent` class owns system prompts, conversation context, reset behavior, and
 response handling, and memory persistence. The Ollama client and memory store
 are injected into the agent, so the brain can be tested without a live model.
 
-File editing and arbitrary command execution remain outside this
-milestone. Camera vision and broader continuous automation remain future
-phases.
+Arbitrary shell execution remains outside the security boundary. Scheduled
+actions use only configured project command aliases, and GUI actions cannot type
+control characters or shell commands through the tool interface.

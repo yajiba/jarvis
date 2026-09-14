@@ -1,11 +1,23 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from concurrent.futures import ThreadPoolExecutor
 import unittest
 
 from jarvis.rag import KnowledgeStore
 
 
 class KnowledgeStoreTests(unittest.TestCase):
+    def test_store_can_be_used_from_dashboard_worker_thread(self) -> None:
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "notes.txt").write_text("worker thread knowledge", encoding="utf-8")
+            with KnowledgeStore(root / "knowledge.db") as store:
+                with ThreadPoolExecutor(max_workers=1) as pool:
+                    indexed = pool.submit(store.index_directory, root).result()
+                    results = pool.submit(store.search, "worker knowledge").result()
+                self.assertEqual(indexed["indexed"], 1)
+                self.assertEqual(results[0]["path"], str(root / "notes.txt"))
+
     def test_index_and_search_local_documents(self) -> None:
         with TemporaryDirectory() as directory:
             root = Path(directory)

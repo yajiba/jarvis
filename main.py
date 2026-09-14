@@ -19,6 +19,8 @@ from jarvis.voice import (
 )
 from jarvis.rag import KnowledgeStore
 from jarvis.scheduler import TaskScheduler
+from jarvis.scheduler.automation import Automation
+from jarvis.tools.vision import Vision
 
 
 def confirm_action(name: str, details: dict) -> bool:
@@ -34,6 +36,7 @@ def confirm_action(name: str, details: dict) -> bool:
 def confirm_voice_action(name: str, details: dict, voice_input, speaker) -> bool:
     prompt = f"Approval required for {name}. Say yes or no."
     print(f"\n{prompt}")
+    print(json.dumps(details, ensure_ascii=True, indent=2))
     if speaker is not None:
         try:
             speaker.speak(prompt)
@@ -146,16 +149,22 @@ def run_session(settings, root, projects, memory, knowledge) -> None:
         command_seconds=settings.wakeword_command_seconds,
     )
     speaker = PiperSpeaker(root / settings.piper_model) if settings.tts_enabled else None
-    confirm = lambda name, details: confirm_voice_action(name, details, voice_input, speaker)
+    confirm = (lambda name, details: confirm_voice_action(name, details, voice_input, speaker)) if settings.voice_agent_enabled else confirm_action
+    automation = Automation(root / 'data' / 'automation.db', projects,
+                            lambda event: print('\nJARVIS automation: ' + json.dumps(event, ensure_ascii=True)))
+    vision = Vision(settings, (root, *settings.allowed_roots))
+    from jarvis.tools.presentations import Presentations
+    presentations = Presentations((root, *settings.allowed_roots))
     tools = create_local_tools(root, confirm=confirm, projects=projects, memory=memory,
                                web=WebClient(enabled=settings.web_enabled),
                                allowed_roots=settings.allowed_roots,
-                               knowledge=knowledge)
+                               knowledge=knowledge, automation=automation, vision=vision,
+                               presentations=presentations)
     agent = Agent(client, coding_client=coding_client, tools=tools, memory=memory)
-    scheduler = TaskScheduler(memory, lambda task: print(f"\nJARVIS reminder: {task['title']}"))
+    scheduler = TaskScheduler(memory, lambda task: print(f"\nJARVIS reminder: {task['title']}"), automation=automation)
     scheduler.start()
 
-    print(f"JARVIS v1.4 voice-only | model: {settings.model} | web: {'on' if settings.web_enabled else 'off'}")
+    print(f"JARVIS v2.0 voice-only | model: {settings.model} | web: {'on' if settings.web_enabled else 'off'}")
     print("Say Hey Jarvis to speak. Say stop listening or press Ctrl+C to exit.")
 
     try:

@@ -11,6 +11,21 @@ class OllamaError(RuntimeError):
     """Raised when Ollama cannot complete a request."""
 
 
+def _request_error(host: str, timeout_seconds: float, error: OSError) -> OllamaError:
+    reason = error.reason if isinstance(error, URLError) else error
+    if isinstance(reason, TimeoutError):
+        return OllamaError(
+            f"Ollama generation timed out after {timeout_seconds:g} seconds at {host}. "
+            "The model may still be loading or the document may be too large."
+        )
+    if isinstance(reason, (ConnectionResetError, ConnectionAbortedError, BrokenPipeError)):
+        return OllamaError(
+            f"Ollama closed the connection during generation at {host}. "
+            "Check the Ollama logs and available RAM/VRAM."
+        )
+    return OllamaError(f"Could not connect to Ollama at {host}. Is Ollama running?")
+
+
 class OllamaClient:
     def __init__(
         self,
@@ -35,9 +50,7 @@ class OllamaClient:
             detail = error.read().decode("utf-8", errors="replace")
             raise OllamaError(f"Ollama returned HTTP {error.code}: {detail}") from error
         except (URLError, TimeoutError, OSError) as error:
-            raise OllamaError(
-                f"Could not connect to Ollama at {self.host}. Is Ollama running?"
-            ) from error
+            raise _request_error(self.host, self.timeout_seconds, error) from error
         except (json.JSONDecodeError, UnicodeDecodeError, KeyError, TypeError) as error:
             raise OllamaError("Ollama returned an invalid response") from error
 
@@ -99,9 +112,7 @@ class OllamaClient:
             detail = error.read().decode("utf-8", errors="replace")
             raise OllamaError(f"Ollama returned HTTP {error.code}: {detail}") from error
         except (URLError, TimeoutError, OSError) as error:
-            raise OllamaError(
-                f"Could not connect to Ollama at {self.host}. Is Ollama running?"
-            ) from error
+            raise _request_error(self.host, self.timeout_seconds, error) from error
         except (json.JSONDecodeError, UnicodeDecodeError, AttributeError, TypeError) as error:
             raise OllamaError("Ollama returned an invalid streaming response") from error
 

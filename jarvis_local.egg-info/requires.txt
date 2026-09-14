@@ -9,6 +9,11 @@ pypdf>=5.0
 python-docx>=1.1
 sentence-transformers>=3.0
 
+[vision]
+Pillow>=10.4
+PyAutoGUI>=0.9.54
+opencv-python>=4.10
+
 [voice]
 faster-whisper>=1.1
 numpy>=1.26
@@ -23,4 +28,5 @@ sounddevice>=0.5
 [wake-word]
 numpy>=1.26
 openwakeword>=0.6
+scikit-learn<2,>=1.5
 sounddevice>=0.5

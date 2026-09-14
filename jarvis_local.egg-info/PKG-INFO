@@ -1,8 +1,12 @@
 Metadata-Version: 2.4
 Name: jarvis-local
-Version: 1.4.0
-Summary: A local-first terminal assistant powered by Ollama.
+Version: 2.0.0
+Summary: A local-first voice, automation, and vision assistant powered by Ollama.
 Requires-Python: >=3.10
+Provides-Extra: vision
+Requires-Dist: Pillow>=10.4; extra == "vision"
+Requires-Dist: PyAutoGUI>=0.9.54; extra == "vision"
+Requires-Dist: opencv-python>=4.10; extra == "vision"
 Provides-Extra: voice
 Requires-Dist: faster-whisper>=1.1; extra == "voice"
 Requires-Dist: numpy>=1.26; extra == "voice"
@@ -15,6 +19,7 @@ Requires-Dist: sounddevice>=0.5; extra == "voice-output"
 Provides-Extra: wake-word
 Requires-Dist: numpy>=1.26; extra == "wake-word"
 Requires-Dist: openwakeword>=0.6; extra == "wake-word"
+Requires-Dist: scikit-learn<2,>=1.5; extra == "wake-word"
 Requires-Dist: sounddevice>=0.5; extra == "wake-word"
 Provides-Extra: dashboard
 Requires-Dist: fastapi>=0.115; extra == "dashboard"
