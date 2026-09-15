@@ -7,7 +7,7 @@ import sqlite3
 from typing import Any
 
 
-SUPPORTED_EXTENSIONS = {".md", ".txt", ".py", ".js", ".ts", ".json", ".yaml", ".yml", ".html", ".css", ".pdf", ".docx"}
+SUPPORTED_EXTENSIONS = {".md", ".txt", ".py", ".js", ".ts", ".json", ".yaml", ".yml", ".html", ".css", ".pdf", ".docx", ".pptx"}
 TOKEN_PATTERN = re.compile(r"[a-zA-Z0-9_]{2,}")
 
 
@@ -23,6 +23,7 @@ class KnowledgeStore:
         # request lock serializes access, so permit that bounded thread handoff.
         self.connection = sqlite3.connect(path, check_same_thread=False)
         self.connection.row_factory = sqlite3.Row
+        self.connection.execute('PRAGMA foreign_keys = ON')
         self._semantic = semantic
         self._collection = None
         self._encoder = None
@@ -66,6 +67,9 @@ class KnowledgeStore:
             except ImportError as error:
                 raise RuntimeError('DOCX support requires: pip install -e ".[rag]"') from error
             return "\n".join(paragraph.text for paragraph in Document(str(path)).paragraphs)
+        if suffix == ".pptx":
+            from jarvis.api.uploads import extract_text
+            return extract_text(path.name, path.read_bytes())
         return path.read_text(encoding="utf-8-sig")
 
     def close(self) -> None:
@@ -80,13 +84,17 @@ class KnowledgeStore:
     def index_directory(self, directory: Path, chunk_size: int = 1200, overlap: int = 150) -> dict[str, int]:
         if chunk_size <= overlap or overlap < 0:
             raise ValueError("chunk_size must be greater than overlap")
-        indexed = skipped = 0
+        indexed = skipped = removed = 0
+        directory = directory.resolve(strict=True)
+        seen = set()
         for path in directory.rglob("*"):
             if not path.is_file() or path.suffix.lower() not in SUPPORTED_EXTENSIONS:
                 continue
             if any(part.startswith(".") or part in {"node_modules", "__pycache__"} for part in path.parts):
                 continue
             try:
+                path = path.resolve(strict=True)
+                seen.add(str(path))
                 stat = path.stat()
                 text = self._extract_text(path)
             except (OSError, UnicodeError, RuntimeError):
@@ -110,6 +118,7 @@ class KnowledgeStore:
                 [(str(path), index, chunk) for index, chunk in enumerate(chunks) if chunk.strip()],
             )
             if self._collection is not None:
+                self._collection.delete(where={'path': str(path)})
                 ids = [f"{path}:{index}" for index, chunk in enumerate(chunks) if chunk.strip()]
                 documents = [chunk for chunk in chunks if chunk.strip()]
                 if ids:
@@ -117,8 +126,18 @@ class KnowledgeStore:
                                             metadatas=[{"path": str(path), "chunk_index": index}
                                                        for index, chunk in enumerate(chunks) if chunk.strip()])
             indexed += 1
+        stale = []
+        for row in self.connection.execute("SELECT path FROM documents").fetchall():
+            indexed_path = Path(row['path'])
+            if indexed_path.is_relative_to(directory) and row['path'] not in seen:
+                stale.append(row['path'])
+        for path in stale:
+            self.connection.execute("DELETE FROM documents WHERE path = ?", (path,))
+            if self._collection is not None:
+                self._collection.delete(where={'path': path})
+            removed += 1
         self.connection.commit()
-        return {"indexed": indexed, "skipped": skipped}
+        return {"indexed": indexed, "skipped": skipped, "removed": removed}
 
     def search(self, query: str, limit: int = 5) -> list[dict[str, Any]]:
         if self._collection is not None and query.strip():

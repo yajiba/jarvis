@@ -1,13 +1,24 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from io import BytesIO
 import unittest
 from unittest.mock import Mock, patch
+from zipfile import ZipFile
 
 from jarvis.api.server import create_app
 from jarvis.memory import MemoryStore
 
 
 class DashboardTests(unittest.TestCase):
+    @staticmethod
+    def _pptx_bytes():
+        data = BytesIO()
+        with ZipFile(data, 'w') as archive:
+            archive.writestr('ppt/presentation.xml', '''<p:presentation xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><p:sldIdLst><p:sldId id="256" r:id="rId1"/></p:sldIdLst></p:presentation>''')
+            archive.writestr('ppt/_rels/presentation.xml.rels', '''<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Target="slides/slide1.xml"/></Relationships>''')
+            archive.writestr('ppt/slides/slide1.xml', '''<p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:t>Lesson title</a:t><a:t>Important point</a:t></p:sld>''')
+        return data.getvalue()
+
     def test_static_avatar_assets_are_served(self) -> None:
         from fastapi.testclient import TestClient
         with TemporaryDirectory() as directory, MemoryStore(Path(directory) / 'jarvis.db') as memory:
@@ -66,6 +77,89 @@ class DashboardTests(unittest.TestCase):
                 headers['X-Filename'] = 'large.txt'
                 headers['Content-Length'] = str(20 * 1024 * 1024 + 1)
                 self.assertEqual(client.post('/analyze-upload', content=b'x', headers=headers).status_code, 413)
+
+    def test_dashboard_analyzes_powerpoint_with_slide_metadata(self) -> None:
+        from fastapi.testclient import TestClient
+        with TemporaryDirectory() as directory, MemoryStore(Path(directory) / 'jarvis.db') as memory:
+            agent = Mock(messages=[])
+            agent.client.host = 'http://127.0.0.1:11434'
+            agent.client.chat.return_value = 'A quick lesson overview.'
+            headers = {'Content-Type':'application/octet-stream', 'X-Filename':'lesson.pptx',
+                       'X-Question':'Give%20me%20a%20quick%20overview'}
+            with TestClient(create_app(agent, memory)) as client:
+                response = client.post('/analyze-upload', content=self._pptx_bytes(), headers=headers)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json()['slide_count'], 1)
+            self.assertFalse(response.json()['content_truncated'])
+            self.assertIn('Slide 1: Lesson title', agent.client.chat.call_args.args[0][1]['content'])
+
+    def test_dashboard_routes_documents_to_document_model(self) -> None:
+        from fastapi.testclient import TestClient
+        with TemporaryDirectory() as directory, MemoryStore(Path(directory) / 'jarvis.db') as memory:
+            agent = Mock(messages=[])
+            agent.client.host = 'http://127.0.0.1:11434'
+            document_client = Mock(host='http://127.0.0.1:11434', model='document-test')
+            document_client.chat.return_value = 'Specialized analysis.'
+            headers = {'Content-Type':'application/octet-stream', 'X-Filename':'notes.txt',
+                       'X-Question':'Analyze'}
+            with TestClient(create_app(agent, memory, document_client=document_client)) as client:
+                response = client.post('/analyze-upload', content=b'important notes', headers=headers)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json()['model'], 'document-test')
+            document_client.chat.assert_called_once()
+            agent.client.chat.assert_not_called()
+
+    def test_uploaded_document_supports_follow_up_without_reupload(self) -> None:
+        from fastapi.testclient import TestClient
+        with TemporaryDirectory() as directory, MemoryStore(Path(directory) / 'jarvis.db') as memory:
+            agent = Mock(messages=[])
+            agent.client.host = 'http://127.0.0.1:11434'
+            agent.client.model = 'test-model'
+            agent.client.chat.side_effect = ['Initial review.', 'Three-question quiz.']
+            headers = {'Content-Type':'application/octet-stream', 'X-Filename':'slides.txt',
+                       'X-Question':'Review%20this'}
+            with TestClient(create_app(agent, memory)) as client:
+                first = client.post('/analyze-upload', content=b'Key fact about biology', headers=headers)
+                context_id = first.json()['context_id']
+                follow_up = client.post('/analyze-context', json={
+                    'context_id': context_id, 'question': 'Create a short quiz'})
+            self.assertEqual(follow_up.status_code, 200)
+            self.assertEqual(follow_up.json()['answer'], 'Three-question quiz.')
+            self.assertEqual(follow_up.json()['context_id'], context_id)
+            self.assertIn('Key fact about biology', agent.client.chat.call_args.args[0][1]['content'])
+            self.assertEqual(agent.client.chat.call_count, 2)
+
+    def test_specific_slide_follow_up_sends_only_requested_slide(self) -> None:
+        from jarvis.api.uploads import analyze_prepared_document
+        client = Mock(host='http://127.0.0.1:11434', model='document-test')
+        client.chat.return_value = 'Slide two explained.'
+        prepared = {'filename':'lesson.pptx', 'slide_count':2, 'content_truncated':False,
+                    'text':'Slide 1: Alpha details\n\nSlide 2: Beta details'}
+        analyze_prepared_document(client, prepared, 'Explain slide 2')
+        prompt = client.chat.call_args.args[0][1]['content']
+        self.assertIn('Slide 2: Beta details', prompt)
+        self.assertNotIn('Slide 1: Alpha details', prompt)
+
+    def test_specific_slide_follow_up_rejects_missing_slide(self) -> None:
+        from jarvis.api.uploads import analyze_prepared_document
+        client = Mock(host='http://127.0.0.1:11434')
+        prepared = {'filename':'lesson.pptx', 'slide_count':2, 'content_truncated':False,
+                    'text':'Slide 1: Alpha\n\nSlide 2: Beta'}
+        with self.assertRaisesRegex(ValueError, 'slide 3 is unavailable'):
+            analyze_prepared_document(client, prepared, 'Review slide 3')
+        client.chat.assert_not_called()
+
+    def test_dashboard_rejects_malformed_powerpoint_cleanly(self) -> None:
+        from fastapi.testclient import TestClient
+        with TemporaryDirectory() as directory, MemoryStore(Path(directory) / 'jarvis.db') as memory:
+            agent = Mock(messages=[])
+            agent.client.host = 'http://127.0.0.1:11434'
+            headers = {'Content-Type':'application/octet-stream', 'X-Filename':'broken.pptx',
+                       'X-Question':'Summarize'}
+            with TestClient(create_app(agent, memory)) as client:
+                response = client.post('/analyze-upload', content=b'not-a-zip', headers=headers)
+            self.assertEqual(response.status_code, 400)
+            self.assertIn('damaged', response.json()['detail'])
 
     def test_activity_is_reset_after_failed_chat(self) -> None:
         agent = Mock()

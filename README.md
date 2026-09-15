@@ -4,6 +4,24 @@ local memory, web intelligence, push-to-talk input, Piper speech output, and
 wake-word detection. Phase 10 combines these capabilities into one voice-agent
 loop while keeping model inference local.
 
+## Model routing
+
+JARVIS can use up to five Ollama model roles without making redundant calls:
+
+```env
+JARVIS_MODEL=qwen3:8b
+JARVIS_FAST_MODEL=gemma3:4b
+JARVIS_CODING_MODEL=qwen2.5-coder:7b
+JARVIS_DOCUMENT_MODEL=qwen3:8b
+JARVIS_VISION_MODEL=gemma3:4b
+```
+
+The general model remains the fallback. The fast model handles only greetings
+and lightweight conversation, the coding model handles code-related requests,
+the document model analyzes dashboard uploads, and the vision model handles
+images. Every specialized role is optional. Reusing the same model name across
+roles avoids unnecessary model swapping on machines with limited VRAM.
+
 ## Full voice agent
 
 The `/agent` command starts continuous wake-word mode. JARVIS listens for
@@ -35,7 +53,7 @@ JARVIS uses the general model for all requests.
 
 Phase 12 provides private document retrieval through `index_knowledge` and
 `search_knowledge`. Index approved Markdown, text, source, JSON, YAML, HTML,
-CSS, PDF, or DOCX folders into `data/knowledge.db`; document contents stay
+CSS, PDF, DOCX, or PPTX folders into `data/knowledge.db`; document contents stay
 local. The `rag` extra enables ChromaDB and local Sentence-Transformers
 semantic retrieval, with SQLite lexical retrieval as the fallback.
 
@@ -113,6 +131,11 @@ is separately analyzed with the approved vision workflow.
 The dashboard composer and Vision card accept drag-and-drop uploads (or click to
 choose). Selecting a file attaches it without reading it. Add a question such as
 `What can you say about this?` and press Send to start the analysis.
+After analysis, the dashboard retains a bounded in-memory copy of the extracted
+text for 30 minutes of inactivity. Follow-up requests such as `Explain slide 8`,
+`Create a five-question quiz`, or `Turn this into study notes` reuse that context
+without uploading the file again. Remove the attachment badge to return to normal
+chat. The context is never persisted to disk and is discarded on server restart.
 The right-hand workspace previews attached images and documents, then displays
 the completed analysis. Selecting Tasks in the sidebar opens task management in
 the same full workspace; Home returns to the dashboard cards.

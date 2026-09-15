@@ -135,6 +135,10 @@ def run_session(settings, root, projects, memory, knowledge) -> None:
         OllamaClient(settings.ollama_host, settings.coding_model, settings.timeout_seconds)
         if settings.coding_model else None
     )
+    fast_client = (
+        OllamaClient(settings.ollama_host, settings.fast_model, settings.timeout_seconds)
+        if settings.fast_model else None
+    )
     voice_input = PushToTalkTranscriber(
         model_name=settings.whisper_model,
         sample_rate=settings.audio_sample_rate,
@@ -160,11 +164,15 @@ def run_session(settings, root, projects, memory, knowledge) -> None:
                                allowed_roots=settings.allowed_roots,
                                knowledge=knowledge, automation=automation, vision=vision,
                                presentations=presentations)
-    agent = Agent(client, coding_client=coding_client, tools=tools, memory=memory)
+    agent = Agent(client, coding_client=coding_client, fast_client=fast_client,
+                  tools=tools, memory=memory)
     scheduler = TaskScheduler(memory, lambda task: print(f"\nJARVIS reminder: {task['title']}"), automation=automation)
     scheduler.start()
 
-    print(f"JARVIS v2.0 voice-only | model: {settings.model} | web: {'on' if settings.web_enabled else 'off'}")
+    configured_models = [settings.model, settings.fast_model, settings.coding_model,
+                         settings.document_model, settings.vision_model]
+    print(f"JARVIS v2.0 voice-only | models: {len(set(filter(None, configured_models)))} | "
+          f"general: {settings.model} | web: {'on' if settings.web_enabled else 'off'}")
     print("Say Hey Jarvis to speak. Say stop listening or press Ctrl+C to exit.")
 
     try:

@@ -17,13 +17,16 @@ class Agent:
         self,
         client: OllamaClient,
         coding_client: OllamaClient | None = None,
+        fast_client: OllamaClient | None = None,
         system_prompt: str = SYSTEM_PROMPT,
         tools: ToolRegistry | None = None,
         memory: MemoryStore | None = None,
         max_tool_rounds: int = 4,
+        max_context_characters: int = 48_000,
     ) -> None:
         self.client = client
         self.coding_client = coding_client
+        self.fast_client = fast_client
         self.system_prompt = system_prompt
         if max_tool_rounds < 1:
             raise ValueError("max_tool_rounds must be positive")
@@ -31,6 +34,9 @@ class Agent:
         self.memory = memory
         self.conversation_id: str | None = None
         self.max_tool_rounds = max_tool_rounds
+        if max_context_characters < 4_000:
+            raise ValueError("max_context_characters must be at least 4000")
+        self.max_context_characters = max_context_characters
         self._messages: list[dict] = []
         self.on_activity: Callable[[str], None] = lambda activity: None
         self.reset()
@@ -56,18 +62,43 @@ class Agent:
         if not cleaned_input:
             raise ValueError("user_input cannot be empty")
 
-        pending_messages = self.messages
+        pending_messages = self._bounded_context(self.messages)
         pending_messages.append({"role": "user", "content": cleaned_input})
         if self.memory is not None and self.conversation_id is not None:
             self.memory.add_message(self.conversation_id, "user", cleaned_input)
         client = self._client_for(cleaned_input)
-        if self.tools is not None:
+        # Lightweight fast-model requests never need the full tool schema.
+        if self.tools is not None and client is not self.fast_client:
             return self._respond_with_tools(pending_messages, on_token, client)
         response = client.chat_stream(pending_messages, on_token)
         self._messages = pending_messages + [{"role": "assistant", "content": response}]
         if self.memory is not None and self.conversation_id is not None:
             self.memory.add_message(self.conversation_id, "assistant", response)
         return response
+
+    def _bounded_context(self, messages: list[dict]) -> list[dict]:
+        """Keep recent complete user turns within the local model's practical budget."""
+        if len(messages) <= 1:
+            return messages
+        system = messages[0]
+        turns = []
+        current = []
+        for message in messages[1:]:
+            if message.get('role') == 'user' and current:
+                turns.append(current)
+                current = []
+            current.append(message)
+        if current:
+            turns.append(current)
+        kept = []
+        used = len(str(system.get('content', '')))
+        for turn in reversed(turns):
+            size = sum(len(str(item.get('content', ''))) for item in turn)
+            if kept and used + size > self.max_context_characters:
+                break
+            kept.append(turn)
+            used += size
+        return [system] + [message for turn in reversed(kept) for message in turn]
 
     def _client_for(self, user_input: str) -> OllamaClient:
         if self.coding_client is not None:
@@ -77,6 +108,13 @@ class Agent:
             }
             if coding_terms.intersection(user_input.casefold().split()):
                 return self.coding_client
+        if self.fast_client is not None:
+            normalized = user_input.casefold().strip(' .!?')
+            fast_phrases = ('hello', 'hi', 'hey', 'thanks', 'thank you', 'good morning',
+                            'good afternoon', 'good evening', 'who are you', 'what can you do')
+            if len(user_input) <= 120 and any(normalized == phrase or normalized.startswith(phrase + ' ')
+                                              for phrase in fast_phrases):
+                return self.fast_client
         return self.client
 
     def _respond_with_tools(

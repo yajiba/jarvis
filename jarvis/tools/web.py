@@ -5,6 +5,7 @@ from html.parser import HTMLParser
 import http.client
 import ipaddress
 import json
+import re
 import socket
 import ssl
 import time
@@ -184,8 +185,30 @@ class WebClient:
         return {**self._stamp(response['url']), 'results': results,
                 'note': 'Search snippets are leads, not verified article contents. Check source pages and dates.'}
 
+    @staticmethod
+    def _relevant_results(query, results):
+        ignored = {'a', 'an', 'and', 'for', 'in', 'is', 'latest', 'of', 'on', 'the',
+                   'to', 'what', 'when', 'where', 'who', 'with'}
+        terms = {term for term in re.findall(r'[a-z0-9]{2,}', query.casefold())
+                 if term not in ignored}
+        if not terms:
+            return bool(results)
+        return any(terms.intersection(re.findall(
+            r'[a-z0-9]{2,}', (item.get('title', '') + ' ' + item.get('snippet', '')).casefold()))
+                   for item in results)
+
     def web_search(self, query: str):
-        return self._feed('https://www.bing.com/search?' + urlencode({'q': self._query(query), 'format': 'rss'}))
+        query = self._query(query)
+        result = self._feed('https://www.bing.com/search?' + urlencode({'q': query, 'format': 'rss'}))
+        result['provider'] = 'Bing'
+        if self._relevant_results(query, result['results']):
+            return result
+        fallback = self._feed('https://news.google.com/rss/search?' + urlencode({
+            'q': query, 'hl': 'en-US', 'gl': 'US', 'ceid': 'US:en'}))
+        fallback['provider'] = 'Google News fallback'
+        fallback['note'] = ('Bing returned no relevant matches, so these are fallback news results. '
+                            'Search snippets are leads; open primary sources to verify claims.')
+        return fallback
 
     def news_search(self, query: str):
         return self._feed('https://news.google.com/rss/search?' + urlencode({

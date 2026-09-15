@@ -26,7 +26,7 @@
 }
 .nav-icon{font-family:"Segoe UI Symbol",sans-serif;display:inline-grid;place-items:center;width:20px;flex:0 0 20px;font-size:17px}.quick-actions span{font-family:"Segoe UI Symbol",sans-serif}.card{box-shadow:inset 0 1px #ffffff06,0 8px 28px #00000012}.card:hover{border-color:#245064}.composer{box-shadow:0 10px 35px #0005,0 0 22px #0da4c018}.face-status{box-shadow:0 5px 18px #0007}
 .drop-zone{grid-column:1/-1;display:flex;align-items:center;justify-content:center;gap:7px;min-height:34px;padding:7px;border:1px dashed #2d7486;border-radius:8px;color:#80b9c6;font-size:10px;cursor:pointer;transition:.15s}.drop-zone:hover,.drop-zone.active{color:#d9fcff;border-color:var(--cyan);background:#12354288}.drop-zone input{display:none}body.dragging::after{content:"Drop to analyze";position:fixed;inset:14px;z-index:100;display:grid;place-items:center;border:2px dashed var(--cyan);border-radius:16px;background:#03121aee;color:#bdfcff;font-size:22px;letter-spacing:.08em;pointer-events:none}
-.composer-attach{display:grid;place-items:center;border:1px solid #2594ac;border-radius:30px;height:47px;min-width:47px;background:linear-gradient(135deg,#176578,#063049);font-size:18px;cursor:pointer}.attachment-tray{display:flex;align-items:center;gap:8px;min-height:25px;padding:4px 18px;color:#9ddde2;font-size:10px}.attachment-tray[hidden]{display:none}.attachment-tray button{color:#ffb4a5;font-size:16px}
+.composer-attach{display:grid;place-items:center;border:1px solid #2594ac;border-radius:30px;height:47px;min-width:47px;background:linear-gradient(135deg,#176578,#063049);font-size:18px;cursor:pointer}.attachment-tray{display:flex;align-items:center;gap:8px;min-height:25px;padding:4px 18px;color:#9ddde2;font-size:10px}.attachment-tray[hidden]{display:none}.attachment-tray button{color:#9ddde2;border:1px solid #1d5261;border-radius:12px;padding:3px 8px;font-size:10px}.attachment-tray #remove-attachment{color:#ffb4a5;border:0;font-size:16px;padding:0 3px}.ppt-actions[hidden]{display:none}
 .workspace[data-view="output"]>.card:not(#output-panel),.workspace[data-view="tasks"]>.card:not(#tasks-panel){display:none}.workspace[data-view="output"] #output-panel,.workspace[data-view="tasks"] #tasks-panel{display:flex;grid-column:1/-1;min-height:calc(100vh - 36px);flex-direction:column}.workspace[data-view="tasks"] #tasks-panel .tasks{max-height:none;flex:1}.workspace-view-close{border:1px solid #245064;border-radius:20px!important;padding:6px 12px;color:#9ddde2!important}.output-content{display:grid;grid-template-columns:minmax(240px,.85fr) minmax(300px,1.15fr);gap:20px;min-height:0;flex:1}.output-preview{display:grid;place-items:center;align-content:center;min-height:360px;border:1px solid #163f4d;border-radius:10px;background:#031018;overflow:hidden}.output-preview img{display:block;max-width:100%;max-height:68vh;object-fit:contain}.output-file{padding:30px;text-align:center;color:#91b8c5;overflow-wrap:anywhere}.output-file span{display:block;font-size:44px;color:var(--cyan);margin-bottom:15px}.output-answer{padding:8px 4px;overflow:auto;font-size:14px;line-height:1.75}.output-answer .pending{padding-left:0}@media(max-width:1100px){.output-content{grid-template-columns:1fr}.output-preview{min-height:260px}.workspace[data-view="output"] #output-panel,.workspace[data-view="tasks"] #tasks-panel{min-height:600px}}
 @media(max-width:850px){.hero{height:auto}.workspace{height:auto;overflow:visible;gap:10px}.workspace .card{padding:14px}.schedule,.tasks{min-height:90px;max-height:130px}.transcript{height:150px}#vision-panel{grid-column:1/-1}}
 </style></head><body>
@@ -36,7 +36,7 @@
 <img class="avatar-body" src="/ui/portrait-clean.png?v=3" alt=""><span class="avatar-blink"></span><span class="talk-mouth"><span class="talk-lower"></span></span>
 </div><div class="waveform" id="waveform"></div><div class="face-status" id="face-status" role="status">Connecting</div></div><div class="portrait-caption right">A MORE<br>CAPABLE<br>YOU</div></section>
 <form class="composer" id="command-form"><button type="button" id="talk-button" aria-label="Toggle wake-word microphone" aria-pressed="true">Mic on</button><label class="composer-attach" for="file-upload" title="Attach a file" aria-label="Attach a file">+</label><input id="command" aria-label="Message JARVIS" placeholder="Ask JARVIS anything..." autocomplete="off"><button type="submit" aria-label="Send message">Send</button></form>
-<div class="attachment-tray" id="attachment-tray" hidden><span id="attachment-name"></span><button type="button" id="remove-attachment" aria-label="Remove attachment">&times;</button></div>
+<div class="attachment-tray" id="attachment-tray" hidden><span id="attachment-name"></span><span class="ppt-actions" id="ppt-actions" hidden><button type="button" data-ppt-question="Give me a quick overview of this deck in five bullets.">Quick overview</button><button type="button" data-ppt-question="Create a concise study guide from this deck.">Study guide</button><button type="button" data-ppt-question="List the decisions and action items in this deck.">Action items</button></span><button type="button" id="remove-attachment" aria-label="Remove attachment">&times;</button></div>
 <div class="voice-toolbar"><button id="mute" type="button" aria-pressed="false">Mute</button><button id="stop-voice" type="button" disabled>Stop speaking</button><div class="mic-level"><label for="mic-meter">Microphone</label><meter id="mic-meter" min="0" max="1" value="0">0</meter><span id="mic-state">Starting</span></div></div><p id="voice-hint">Say “Hey Jarvis” followed by your command</p>
 <div class="quick-actions"><button data-prompt="Add a task to " type="button"><span>+</span>Create a task</button><button data-prompt="Help me plan my day using my open tasks." type="button"><span>&#9783;</span>Plan my day</button><button data-prompt="Summarize this: " type="button"><span>&#8801;</span>Summarize</button><button data-prompt="Help me brainstorm ideas for " type="button"><span>&#10022;</span>Brainstorm</button></div></section>
 <section class="workspace" aria-label="Personal dashboard">
@@ -57,7 +57,7 @@ const dayKey = date => date.toLocaleDateString('en-CA', {timeZone: TIME_ZONE});
 const $ = selector => document.querySelector(selector);
 const panel=$('#face-panel'), transcript=$('#transcript');
 let busy=false, listening=false, preparing=false, speaking=false, muted=false, online=false, activity='Thinking', count=0;
-let attachedFile=null,attachmentPreviewUrl=null;
+let attachedFile=null,documentContext=null,attachmentPreviewUrl=null;
 let audioContext, audio, audioUrl, speechController, micStream, meterSource, frame, micStarting=false;
 let micEnabled=true, recognitionRunning=false, wakeArmed=false, wakeTimer=null, recognitionRestart=null,lastWakeText='',lastWakeAt=0;
 let analysisTimeoutMs=615000;
@@ -82,6 +82,10 @@ async function requestChat(text,signal){
 async function requestUpload(file,question,signal){
  const options={method:'POST',headers:{'Content-Type':'application/octet-stream','X-Filename':encodeURIComponent(file.name),'X-Question':encodeURIComponent(question)},body:file,signal};
  while(true){try{return await request('/analyze-upload',options);}catch(error){if(error.status!==409)throw error;activity='Waiting for previous reply';paint();await new Promise(resolve=>setTimeout(resolve,700));if(signal.aborted){const aborted=Error('Analysis aborted');aborted.name='AbortError';throw aborted;}}}
+}
+async function requestDocumentContext(contextId,question,signal){
+ const options={method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({context_id:contextId,question}),signal};
+ while(true){try{return await request('/analyze-context',options);}catch(error){if(error.status!==409)throw error;activity='Waiting for previous reply';paint();await new Promise(resolve=>setTimeout(resolve,700));if(signal.aborted){const aborted=Error('Analysis aborted');aborted.name='AbortError';throw aborted;}}}
 }
 // Construct Markdown nodes directly; model output is never inserted as HTML.
 function inline(parent,text){
@@ -178,7 +182,7 @@ if(recognition){recognition.lang='en-US';recognition.interimResults=false;recogn
  recognition.onresult=event=>{for(let index=event.resultIndex;index<event.results.length;index++){if(!event.results[index].isFinal)continue;const text=event.results[index][0].transcript.trim();if(!text)continue;const now=Date.now(),dedupe=text.toLowerCase();if(dedupe===lastWakeText&&now-lastWakeAt<2500)continue;lastWakeText=dedupe;lastWakeAt=now;const command=extractWakeCommand(text);if(command!==null){wakeArmed=true;$('#mic-state').textContent='Command';$('#voice-hint').textContent='I’m listening…';if(wakeTimer)clearTimeout(wakeTimer);wakeTimer=setTimeout(()=>{clearWakeArm();$('#mic-state').textContent='Wake';$('#voice-hint').textContent='Say “Hey Jarvis” followed by your command';},10000);if(command){clearWakeArm();pauseWakeListening();send(command);}else paint();}else if(wakeArmed){clearWakeArm();pauseWakeListening();send(text);}}};
 }else{micEnabled=false;$('#mic-state').textContent='Unavailable';$('#voice-hint').textContent='Browser voice input unavailable. You can still type messages.';}
 async function send(text){
- if(busy)return;if(attachedFile)return analyzeUpload(attachedFile,text.trim()||'What is this file all about?');if(!text.trim())return;pauseWakeListening();stopVoice();busy=true;activity='Thinking';paint();message(text,true);$('#command-form button[type=submit]').disabled=true;
+ if(busy)return;if(attachedFile)return analyzeUpload(attachedFile,text.trim()||'What is this file all about?');if(documentContext&&text.trim())return analyzeContext(documentContext,text.trim());if(!text.trim())return;pauseWakeListening();stopVoice();busy=true;activity='Thinking';paint();message(text,true);$('#command-form button[type=submit]').disabled=true;
  const pending=document.createElement('div');pending.className='pending';pending.setAttribute('role','status');transcript.append(pending);
  const start=performance.now();const timer=setInterval(()=>{pending.textContent=activity+' \u00b7 '+Math.floor((performance.now()-start)/1000)+' s';},500);
  const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),120000);
@@ -189,20 +193,29 @@ async function send(text){
 }
 function attachUpload(file){
  if(!file||busy)return;if(file.size<1||file.size>20*1024*1024){$('#voice-hint').textContent='Choose a file between 1 byte and 20 MiB.';return;}
- attachedFile=file;$('#attachment-name').textContent=file.name;$('#attachment-tray').hidden=false;$('#drop-zone').classList.add('active');showAttachmentPreview(file);$('#command').focus();$('#voice-hint').textContent='Attached '+file.name+'. Add a question, then press Send.';
+ documentContext=null;attachedFile=file;$('#attachment-name').textContent=file.name;$('#attachment-tray').hidden=false;$('#ppt-actions').hidden=!file.name.toLowerCase().endsWith('.pptx');$('#drop-zone').classList.add('active');showAttachmentPreview(file);$('#command').focus();$('#voice-hint').textContent=file.name.toLowerCase().endsWith('.pptx')?'Attached '+file.name+'. Choose a fast action or ask a question.':'Attached '+file.name+'. Add a question, then press Send.';
 }
-function clearAttachment(keepPreview=false){attachedFile=null;$('#attachment-tray').hidden=true;$('#attachment-name').textContent='';$('#drop-zone').classList.remove('active');$('#file-upload').value='';if(!keepPreview){if(attachmentPreviewUrl)URL.revokeObjectURL(attachmentPreviewUrl);attachmentPreviewUrl=null;setWorkspaceView('dashboard');}}
+function clearAttachment(keepPreview=false){attachedFile=null;documentContext=null;$('#attachment-tray').hidden=true;$('#ppt-actions').hidden=true;$('#attachment-name').textContent='';$('#drop-zone').classList.remove('active');$('#file-upload').value='';if(!keepPreview){if(attachmentPreviewUrl)URL.revokeObjectURL(attachmentPreviewUrl);attachmentPreviewUrl=null;setWorkspaceView('dashboard');}}
+function retainDocumentContext(data,file){attachedFile=null;documentContext={id:data.context_id,filename:file.name,slideCount:data.slide_count};$('#attachment-name').textContent=file.name+' · active context';$('#attachment-tray').hidden=false;$('#ppt-actions').hidden=!file.name.toLowerCase().endsWith('.pptx');$('#drop-zone').classList.add('active');$('#file-upload').value='';$('#voice-hint').textContent='You can now ask follow-up questions about '+file.name+'. Remove it to return to normal chat.';}
 async function analyzeUpload(file,question){
  pauseWakeListening();stopVoice();busy=true;activity='Analyzing '+file.name;paint();message(question+' ['+file.name+']',true);$('#output-status').textContent='Analyzing';const answer=$('#output-answer');answer.replaceChildren();const outputPending=document.createElement('div');outputPending.className='pending';outputPending.textContent='Reading and analyzing '+file.name+'…';answer.append(outputPending);setWorkspaceView('output');$('#command-form button[type=submit]').disabled=true;
  const pending=document.createElement('div');pending.className='pending';pending.setAttribute('role','status');pending.textContent='Reading '+file.name+'…';transcript.append(pending);
  const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),analysisTimeoutMs);
- try{const data=await requestUpload(file,question,controller.signal);if(!data.answer?.trim())throw Error('The model returned an empty file analysis.');message(data.answer);showTextOutput('Analysis · '+file.name,data.answer,'Complete',true);clearAttachment(true);busy=false;speak(data.answer);}
+ try{const data=await requestUpload(file,question,controller.signal);if(!data.answer?.trim())throw Error('The model returned an empty file analysis.');message(data.answer);const detail=data.slide_count?'Complete · '+data.slide_count+' slides'+(data.content_truncated?' · condensed':''):'Complete';showTextOutput('Analysis · '+file.name,data.answer,detail,true);if(data.context_id)retainDocumentContext(data,file);else clearAttachment(true);busy=false;speak(data.answer);}
  catch(error){const detail=error.name==='AbortError'?'File analysis timed out after '+Math.round(analysisTimeoutMs/60000)+' minutes.':error.message;message(detail).classList.add('error');showTextOutput('Analysis · '+file.name,detail,'Failed',true);}
+ finally{busy=false;clearTimeout(timeout);pending.remove();$('#command-form button[type=submit]').disabled=false;paint();scheduleWakeListening();}
+}
+async function analyzeContext(context,question){
+ pauseWakeListening();stopVoice();busy=true;activity='Reviewing '+context.filename;paint();message(question+' ['+context.filename+']',true);$('#command-form button[type=submit]').disabled=true;
+ const pending=document.createElement('div');pending.className='pending';pending.setAttribute('role','status');pending.textContent='Reviewing saved file context…';transcript.append(pending);
+ const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),analysisTimeoutMs);
+ try{const data=await requestDocumentContext(context.id,question,controller.signal);if(!data.answer?.trim())throw Error('The model returned an empty file analysis.');message(data.answer);showTextOutput('Follow-up · '+context.filename,data.answer,'Complete · context retained',true);busy=false;speak(data.answer);}
+ catch(error){const detail=error.name==='AbortError'?'Follow-up timed out.':error.message;if(error.status===404)clearAttachment(true);message(detail).classList.add('error');showTextOutput('Follow-up · '+context.filename,detail,'Failed',true);}
  finally{busy=false;clearTimeout(timeout);pending.remove();$('#command-form button[type=submit]').disabled=false;paint();scheduleWakeListening();}
 }
 let refreshing=false;
 async function refresh(){if(refreshing)return;refreshing=true;
- try{const data=await request('/status',{signal:AbortSignal.timeout(15000)});online=true;$('#model').textContent=data.model||'No model';
+ try{const data=await request('/status',{signal:AbortSignal.timeout(15000)});online=true;const models=[...new Set(Object.values(data.models||{}).filter(Boolean))];$('#model').textContent=(data.model||'No model')+(models.length>1?' · '+models.length+' models':'');
  const hw=data.hardware||{};const cpu=hw.cpu?.[0]?.LoadPercentage;$('#cpu').textContent=cpu==null?'Unavailable':cpu+'%';
  $('#ram').textContent=hw.ram_total_bytes?Math.round((1-hw.ram_free_bytes/hw.ram_total_bytes)*100)+'%':'Unavailable';$('#gpu').textContent=hw.gpu_metrics?.available?'Available':'Unavailable';$('#voice').textContent=data.voice_ready?'Ready':'Unavailable';
  }catch{online=false;$('#model-connection').textContent='Dashboard offline';}finally{refreshing=false;paint();}}
@@ -213,6 +226,7 @@ async function pollActivity(){if(!busy||pollingActivity)return;pollingActivity=t
 $('#command-form').addEventListener('submit',event=>{event.preventDefault();const input=$('#command');if((!input.value.trim()&&!attachedFile)||busy)return;unlockAudio();send(input.value);input.value='';});
 $('#file-upload').addEventListener('change',event=>attachUpload(event.target.files[0]));
 $('#remove-attachment').addEventListener('click',clearAttachment);
+$('#ppt-actions').addEventListener('click',event=>{const question=event.target.dataset.pptQuestion;if(question&&(attachedFile||documentContext)&&!busy){$('#command').value=question;$('#command-form').requestSubmit();}});
 $('#close-output').addEventListener('click',()=>setWorkspaceView('dashboard'));
 let dragDepth=0;
 window.addEventListener('dragenter',event=>{if(event.dataTransfer?.types?.includes('Files')){event.preventDefault();dragDepth++;document.body.classList.add('dragging');}});

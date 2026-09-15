@@ -129,6 +129,7 @@ class OllamaClientTests(unittest.TestCase):
         self.assertIsInstance(request, Request)
         request_payload = json.loads(request.data.decode("utf-8"))
         self.assertFalse(request_payload["think"])
+        self.assertEqual(request_payload["keep_alive"], "30m")
 
     def test_invalid_response_raises_ollama_error(self) -> None:
         def request(request: object, timeout: float) -> FakeResponse:

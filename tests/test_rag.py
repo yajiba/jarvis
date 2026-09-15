@@ -1,6 +1,7 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from concurrent.futures import ThreadPoolExecutor
+from zipfile import ZipFile
 import unittest
 
 from jarvis.rag import KnowledgeStore
@@ -54,6 +55,32 @@ class KnowledgeStoreTests(unittest.TestCase):
                 matches = store.search("attendance workflow")
 
             self.assertTrue(matches)
+
+    def test_reindex_removes_deleted_documents(self) -> None:
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / 'temporary.txt'
+            source.write_text('obsolete private material', encoding='utf-8')
+            with KnowledgeStore(root / 'knowledge.db') as store:
+                store.index_directory(root)
+                source.unlink()
+                result = store.index_directory(root)
+                self.assertEqual(result['removed'], 1)
+                self.assertEqual(store.search('obsolete material'), [])
+
+    def test_powerpoint_text_is_indexed(self) -> None:
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            deck = root / 'lesson.pptx'
+            with ZipFile(deck, 'w') as archive:
+                archive.writestr('ppt/presentation.xml', '<p:presentation xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><p:sldIdLst><p:sldId id="1" r:id="rId1"/></p:sldIdLst></p:presentation>')
+                archive.writestr('ppt/_rels/presentation.xml.rels', '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Target="slides/slide1.xml"/></Relationships>')
+                archive.writestr('ppt/slides/slide1.xml', '<p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:t>photosynthesis chlorophyll</a:t></p:sld>')
+            with KnowledgeStore(root / 'knowledge.db') as store:
+                result = store.index_directory(root)
+                matches = store.search('photosynthesis')
+            self.assertEqual(result['indexed'], 1)
+            self.assertEqual(matches[0]['path'], str(deck))
 
 
 if __name__ == "__main__":

@@ -79,6 +79,35 @@ class AgentTests(unittest.TestCase):
         self.assertEqual(len(general.calls), 0)
         self.assertEqual(len(coding.calls), 1)
 
+    def test_fast_model_handles_only_lightweight_conversation(self) -> None:
+        general = FakeClient('general')
+        fast = FakeClient('fast')
+        agent = Agent(general, fast_client=fast)
+        self.assertEqual(agent.respond_stream('Hello Jarvis', lambda token: None), 'fast')
+        self.assertEqual(agent.respond_stream('Explain distributed consensus', lambda token: None), 'general')
+        self.assertEqual(len(fast.calls), 1)
+        self.assertEqual(len(general.calls), 1)
+
+    def test_fast_model_does_not_receive_tool_schema(self) -> None:
+        from jarvis.tools.registry import ToolRegistry
+        general = FakeClient('general')
+        fast = FakeClient('fast')
+        agent = Agent(general, fast_client=fast, tools=ToolRegistry([]))
+        self.assertEqual(agent.respond_stream('Hello', lambda token: None), 'fast')
+        self.assertEqual(len(fast.calls), 1)
+
+    def test_old_complete_turns_are_pruned_from_model_context(self) -> None:
+        client = FakeClient('x' * 2300)
+        agent = Agent(client, system_prompt='system', max_context_characters=4000)
+        agent.respond_stream('first', lambda token: None)
+        agent.respond_stream('second', lambda token: None)
+        agent.respond_stream('third', lambda token: None)
+        context = client.calls[-1]
+        self.assertEqual(context[0]['role'], 'system')
+        self.assertNotIn('first', [item.get('content') for item in context])
+        self.assertIn('second', [item.get('content') for item in context])
+        self.assertEqual(context[-1]['content'], 'third')
+
 
 if __name__ == "__main__":
     unittest.main()

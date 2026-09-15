@@ -6,13 +6,15 @@ from threading import Lock
 from urllib.request import urlopen
 from urllib.parse import unquote
 import json
+import time
+import uuid
 from contextlib import asynccontextmanager
 
 from jarvis.memory import MemoryStore
 
 
 def create_app(agent: Any, memory: MemoryStore, settings: Any = None, tools: Any = None,
-               scheduler=None, automation=None, approvals=None, vision=None):
+               scheduler=None, automation=None, approvals=None, vision=None, document_client=None):
     try:
         from fastapi import FastAPI, HTTPException, Request
         from fastapi.responses import FileResponse, Response
@@ -61,7 +63,21 @@ def create_app(agent: Any, memory: MemoryStore, settings: Any = None, tools: Any
     speaker = PiperSpeaker(model_path)
     activity = {"state": "Ready"}
     chat_lock = Lock()
+    document_contexts = {}
+    document_context_ttl = 30 * 60
     agent.on_activity = lambda value: activity.update(state=value)
+
+    def remember_document(prepared):
+        now = time.monotonic()
+        for key, value in list(document_contexts.items()):
+            if now - value['created_at'] > document_context_ttl:
+                document_contexts.pop(key, None)
+        while len(document_contexts) >= 4:
+            oldest = min(document_contexts, key=lambda key: document_contexts[key]['created_at'])
+            document_contexts.pop(oldest, None)
+        context_id = uuid.uuid4().hex
+        document_contexts[context_id] = {**prepared, 'created_at': now}
+        return context_id
 
     @app.get("/activity")
     def get_activity():
@@ -79,6 +95,11 @@ def create_app(agent: Any, memory: MemoryStore, settings: Any = None, tools: Any
         except (OSError, ValueError, TypeError):
             pass
         return {"connection": connection, "model": model,
+                "models": {"general": model,
+                           "fast": getattr(settings, 'fast_model', None),
+                           "coding": getattr(settings, 'coding_model', None),
+                           "document": getattr(settings, 'document_model', None),
+                           "vision": getattr(settings, 'vision_model', None)},
                 "voice": model_path.stem, "engine": "Piper",
                 "voice_enabled": bool(getattr(settings, "tts_enabled", False)),
                 "timeout_seconds": float(getattr(settings, "timeout_seconds", 120.0))}
@@ -106,6 +127,9 @@ def create_app(agent: Any, memory: MemoryStore, settings: Any = None, tools: Any
         return {
             "status": "online",
             "model": getattr(settings, "model", None),
+            "models": {role: getattr(settings, attribute, None) for role, attribute in {
+                'general': 'model', 'fast': 'fast_model', 'coding': 'coding_model',
+                'document': 'document_model', 'vision': 'vision_model'}.items()},
             "web_enabled": getattr(settings, "web_enabled", False),
             "conversation_messages": len(agent.messages),
             "hardware": hardware,
@@ -163,8 +187,8 @@ def create_app(agent: Any, memory: MemoryStore, settings: Any = None, tools: Any
     @app.post('/analyze-upload')
     async def analyze_upload(request: Request):
         from starlette.concurrency import run_in_threadpool
-        from jarvis.api.uploads import (IMAGE_EXTENSIONS, MAX_UPLOAD_BYTES,
-                                        analyze_document, safe_filename)
+        from jarvis.api.uploads import (IMAGE_EXTENSIONS, MAX_EXTRACTED_CHARACTERS, MAX_UPLOAD_BYTES,
+                                        analyze_prepared_document, prepare_document, safe_filename)
         try:
             length = int(request.headers.get('content-length', '0'))
         except ValueError as error:
@@ -190,7 +214,14 @@ def create_app(agent: Any, memory: MemoryStore, settings: Any = None, tools: Any
                     raise HTTPException(status_code=503, detail='Image analysis is unavailable')
                 result = await run_in_threadpool(vision.analyze_image_bytes, name, data, question)
             else:
-                result = await run_in_threadpool(analyze_document, agent.client, name, data, question)
+                prepared = await run_in_threadpool(prepare_document, name, data, question)
+                result = await run_in_threadpool(
+                    analyze_prepared_document, document_client or agent.client, prepared, question)
+                cached = (await run_in_threadpool(
+                    prepare_document, name, data, '', MAX_EXTRACTED_CHARACTERS)
+                          if Path(name).suffix.lower() == '.pptx' else prepared)
+                result['context_id'] = remember_document(cached)
+                result['context_expires_seconds'] = document_context_ttl
         except ValueError as error:
             raise HTTPException(status_code=400, detail=str(error)) from error
         except RuntimeError as error:
@@ -199,6 +230,36 @@ def create_app(agent: Any, memory: MemoryStore, settings: Any = None, tools: Any
             activity['state'] = 'Ready'
             chat_lock.release()
         return result
+
+    @app.post('/analyze-context')
+    async def analyze_context(payload: dict[str, Any]):
+        from starlette.concurrency import run_in_threadpool
+        from jarvis.api.uploads import analyze_prepared_document
+        context_id = payload.get('context_id')
+        question = payload.get('question')
+        if not isinstance(context_id, str) or not isinstance(question, str) or not question.strip() or len(question) > 1000:
+            raise HTTPException(status_code=400, detail='A valid document context and question are required')
+        prepared = document_contexts.get(context_id)
+        if prepared is None or time.monotonic() - prepared['created_at'] > document_context_ttl:
+            document_contexts.pop(context_id, None)
+            raise HTTPException(status_code=404, detail='Document context expired; attach the file again')
+        if not chat_lock.acquire(blocking=False):
+            raise HTTPException(status_code=409, detail='JARVIS is handling another message. Please wait.')
+        try:
+            activity['state'] = 'Reviewing ' + prepared['filename']
+            result = await run_in_threadpool(
+                analyze_prepared_document, document_client or agent.client, prepared, question.strip())
+            prepared['created_at'] = time.monotonic()
+            result['context_id'] = context_id
+            result['context_expires_seconds'] = document_context_ttl
+            return result
+        except ValueError as error:
+            raise HTTPException(status_code=400, detail=str(error)) from error
+        except RuntimeError as error:
+            raise HTTPException(status_code=503, detail=str(error)) from error
+        finally:
+            activity['state'] = 'Ready'
+            chat_lock.release()
 
     @app.get("/")
     def index():
@@ -244,11 +305,18 @@ def main() -> None:
     coding_client = (OllamaClient(settings.ollama_host, settings.coding_model,
                                   settings.timeout_seconds)
                      if settings.coding_model else None)
+    fast_client = (OllamaClient(settings.ollama_host, settings.fast_model,
+                                settings.timeout_seconds)
+                   if settings.fast_model else None)
+    document_client = (OllamaClient(settings.ollama_host, settings.document_model,
+                                    settings.timeout_seconds)
+                       if settings.document_model else None)
     agent = Agent(OllamaClient(settings.ollama_host, settings.model, settings.timeout_seconds),
-                  coding_client=coding_client, tools=tools, memory=memory)
+                  coding_client=coding_client, fast_client=fast_client, tools=tools, memory=memory)
     try:
         scheduler = TaskScheduler(memory, lambda task: print('JARVIS reminder: ' + task['title']), automation=automation)
-        uvicorn.run(create_app(agent, memory, settings, tools, scheduler, automation, approvals, vision), host="127.0.0.1", port=8765)
+        uvicorn.run(create_app(agent, memory, settings, tools, scheduler, automation, approvals,
+                               vision, document_client), host="127.0.0.1", port=8765)
     finally:
         knowledge.close()
         memory.close()

@@ -110,6 +110,19 @@ class WebToolTests(unittest.TestCase):
                 with self.assertRaises(WebError):
                     self.web.web_search('docs')
 
+    def test_irrelevant_web_results_fall_back_to_news_search(self):
+        irrelevant = document('''<rss><channel><item><title>Regional headlines</title>
+            <link>https://example.com/local</link><description>Unrelated stories</description>
+            </item></channel></rss>''', 'application/rss+xml')
+        fallback = document('''<rss><channel><item><title>Python release announced</title>
+            <link>https://example.com/python</link><description>Python version details</description>
+            </item></channel></rss>''', 'application/rss+xml')
+        self.transport.get.side_effect = [irrelevant, fallback]
+        result = self.web.web_search('latest Python release')
+        self.assertEqual(result['provider'], 'Google News fallback')
+        self.assertEqual(result['results'][0]['url'], 'https://example.com/python')
+        self.assertEqual(self.transport.get.call_count, 2)
+
     def test_page_extraction_removes_scripts_and_caps_output(self):
         self.transport.get.return_value = document('<title>Docs</title><script>bad()</script><p>' + 'x' * 17000 + '</p>')
         result = self.web.read_web('https://example.com/')

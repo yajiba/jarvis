@@ -32,7 +32,9 @@ def _read_env(path: Path) -> dict[str, str]:
 class Settings:
     ollama_host: str = "http://127.0.0.1:11434"
     model: str = "qwen3:8b"
+    fast_model: str | None = None
     coding_model: str | None = None
+    document_model: str | None = None
     vision_model: str | None = None
     gui_enabled: bool = False
     camera_index: int = 0
@@ -54,6 +56,20 @@ class Settings:
     def from_environment(cls, env_path: Path | None = None) -> "Settings":
         values = _read_env(env_path if env_path is not None else Path(__file__).resolve().parent.parent / ".env")
         values.update(os.environ)
+        def boolean(name: str, default: bool) -> bool:
+            raw = values.get(name, str(default)).strip().lower()
+            if raw not in {'1', 'true', 'yes', 'on', '0', 'false', 'no', 'off'}:
+                raise ValueError(f'{name} must be true or false')
+            return raw in {'1', 'true', 'yes', 'on'}
+
+        def number(name: str, default, cast, minimum, maximum):
+            try:
+                result = cast(values.get(name, default))
+            except (TypeError, ValueError) as error:
+                raise ValueError(f'{name} must be a number') from error
+            if not math.isfinite(result) or not minimum <= result <= maximum:
+                raise ValueError(f'{name} must be between {minimum} and {maximum}')
+            return result
         timeout_value = values.get("JARVIS_TIMEOUT_SECONDS", "120")
         try:
             timeout_seconds = float(timeout_value)
@@ -81,16 +97,14 @@ class Settings:
         if not valid:
             raise ValueError("OLLAMA_HOST must be a valid HTTP or HTTPS URL")
 
-        web_value = values.get('JARVIS_WEB_ENABLED', 'true').strip().lower()
-        if web_value not in {'1', 'true', 'yes', 'on', '0', 'false', 'no', 'off'}:
-            raise ValueError('JARVIS_WEB_ENABLED must be true or false')
+        web_enabled = boolean('JARVIS_WEB_ENABLED', True)
         allowed_roots: list[Path] = []
-        gui_value = values.get('JARVIS_GUI_ENABLED', 'false').strip().lower()
-        if gui_value not in {'1','true','yes','on','0','false','no','off'}:
-            raise ValueError('JARVIS_GUI_ENABLED must be true or false')
-        camera_index = int(values.get('JARVIS_CAMERA_INDEX', '0'))
-        if not 0 <= camera_index <= 16:
-            raise ValueError('JARVIS_CAMERA_INDEX must be between 0 and 16')
+        gui_enabled = boolean('JARVIS_GUI_ENABLED', False)
+        camera_index = number('JARVIS_CAMERA_INDEX', 0, int, 0, 16)
+        sample_rate = number('JARVIS_AUDIO_SAMPLE_RATE', cls.audio_sample_rate, int, 8000, 192000)
+        wakeword_threshold = number('JARVIS_WAKEWORD_THRESHOLD', cls.wakeword_threshold, float, 0.01, 1.0)
+        command_seconds = number('JARVIS_WAKEWORD_COMMAND_SECONDS', cls.wakeword_command_seconds,
+                                 float, 0.5, 60.0)
         for raw_root in values.get('JARVIS_ALLOWED_ROOTS', '').split(';'):
             if not raw_root.strip():
                 continue
@@ -101,23 +115,23 @@ class Settings:
         return cls(
             ollama_host=host,
             model=values.get("JARVIS_MODEL", cls.model),
+            fast_model=values.get('JARVIS_FAST_MODEL') or None,
             coding_model=values.get("JARVIS_CODING_MODEL") or None,
+            document_model=values.get('JARVIS_DOCUMENT_MODEL') or None,
             vision_model=values.get('JARVIS_VISION_MODEL') or None,
-            gui_enabled=gui_value in {'1','true','yes','on'},
+            gui_enabled=gui_enabled,
             camera_index=camera_index,
             timeout_seconds=timeout_seconds,
             whisper_model=values.get("JARVIS_WHISPER_MODEL", cls.whisper_model),
-            audio_sample_rate=int(values.get("JARVIS_AUDIO_SAMPLE_RATE", cls.audio_sample_rate)),
+            audio_sample_rate=sample_rate,
             whisper_device=values.get("JARVIS_WHISPER_DEVICE", cls.whisper_device),
-            tts_enabled=values.get("JARVIS_TTS_ENABLED", "false").lower() in {"1", "true", "yes", "on"},
+            tts_enabled=boolean('JARVIS_TTS_ENABLED', False),
             piper_model=values.get("JARVIS_PIPER_MODEL", cls.piper_model),
             wakeword_model=values.get("JARVIS_WAKEWORD_MODEL", cls.wakeword_model),
-            wakeword_threshold=float(values.get("JARVIS_WAKEWORD_THRESHOLD", cls.wakeword_threshold)),
-            wakeword_command_seconds=float(values.get("JARVIS_WAKEWORD_COMMAND_SECONDS", cls.wakeword_command_seconds)),
-            web_enabled=web_value in {'1', 'true', 'yes', 'on'},
-            voice_agent_enabled=values.get('JARVIS_VOICE_AGENT_ENABLED', 'false').strip().lower()
-            in {'1', 'true', 'yes', 'on'},
-            rag_semantic_enabled=values.get('JARVIS_RAG_SEMANTIC_ENABLED', 'false').strip().lower()
-            in {'1', 'true', 'yes', 'on'},
+            wakeword_threshold=wakeword_threshold,
+            wakeword_command_seconds=command_seconds,
+            web_enabled=web_enabled,
+            voice_agent_enabled=boolean('JARVIS_VOICE_AGENT_ENABLED', False),
+            rag_semantic_enabled=boolean('JARVIS_RAG_SEMANTIC_ENABLED', False),
             allowed_roots=tuple(dict.fromkeys(allowed_roots)),
         )

@@ -32,11 +32,13 @@ class OllamaClient:
         host: str,
         model: str,
         timeout_seconds: float = 120.0,
+        keep_alive: str = "30m",
         request_fn: Callable[..., object] | None = None,
     ) -> None:
         self.host = host.rstrip("/")
         self.model = model
         self.timeout_seconds = timeout_seconds
+        self.keep_alive = keep_alive
         self._request_fn = request_fn or urlopen
 
     def chat(self, messages: list[dict[str, str]]) -> str:
@@ -134,6 +136,7 @@ class OllamaClient:
                 "messages": messages,
                 "stream": stream,
                 "think": False,
+                "keep_alive": self.keep_alive,
                 **({"tools": tools} if tools is not None else {}),
             }
         ).encode("utf-8")

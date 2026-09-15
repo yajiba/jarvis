@@ -49,6 +49,16 @@ class SettingsTests(unittest.TestCase):
             with patch.dict(os.environ, {'JARVIS_MODEL': 'shell-model'}):
                 self.assertEqual(Settings.from_environment(path).model, 'shell-model')
 
+    def test_optional_model_roles_are_loaded(self):
+        with TemporaryDirectory() as directory, patch.dict(os.environ, {
+                'JARVIS_FAST_MODEL': 'fast', 'JARVIS_CODING_MODEL': 'coder',
+                'JARVIS_DOCUMENT_MODEL': 'long-context', 'JARVIS_VISION_MODEL': 'vision'}, clear=True):
+            settings = Settings.from_environment(Path(directory) / '.env')
+            self.assertEqual(settings.fast_model, 'fast')
+            self.assertEqual(settings.coding_model, 'coder')
+            self.assertEqual(settings.document_model, 'long-context')
+            self.assertEqual(settings.vision_model, 'vision')
+
     def test_missing_file_uses_defaults(self):
         with TemporaryDirectory() as directory, patch.dict(os.environ, {}, clear=True):
             self.assertEqual(Settings.from_environment(Path(directory) / '.env'), Settings())
@@ -77,3 +87,20 @@ class SettingsTests(unittest.TestCase):
                 path.write_text(entry, encoding='utf-8')
                 with self.subTest(entry=entry), self.assertRaisesRegex(ValueError, 'line 1'):
                     Settings.from_environment(path)
+
+    def test_voice_vision_and_rag_settings_are_validated(self):
+        with TemporaryDirectory() as directory, patch.dict(os.environ, {}, clear=True):
+            path = Path(directory) / '.env'
+            invalid = {
+                'JARVIS_TTS_ENABLED': 'perhaps',
+                'JARVIS_VOICE_AGENT_ENABLED': 'sometimes',
+                'JARVIS_RAG_SEMANTIC_ENABLED': 'maybe',
+                'JARVIS_AUDIO_SAMPLE_RATE': '100',
+                'JARVIS_WAKEWORD_THRESHOLD': '1.5',
+                'JARVIS_WAKEWORD_COMMAND_SECONDS': '0',
+                'JARVIS_CAMERA_INDEX': 'camera',
+            }
+            for name, value in invalid.items():
+                with self.subTest(name=name), patch.dict(os.environ, {name: value}):
+                    with self.assertRaisesRegex(ValueError, name):
+                        Settings.from_environment(path)
