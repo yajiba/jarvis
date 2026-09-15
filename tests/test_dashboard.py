@@ -27,7 +27,7 @@ class DashboardTests(unittest.TestCase):
                 page = client.get('/')
                 asset = client.get('/ui/portrait-clean.png')
                 self.assertEqual(page.status_code, 200)
-                self.assertIn('JARVIS animated avatar', page.text)
+                self.assertIn('Jean animated avatar', page.text)
                 self.assertEqual(asset.status_code, 200)
                 self.assertEqual(asset.headers['content-type'], 'image/png')
 

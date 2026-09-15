@@ -83,7 +83,7 @@ class AgentTests(unittest.TestCase):
         general = FakeClient('general')
         fast = FakeClient('fast')
         agent = Agent(general, fast_client=fast)
-        self.assertEqual(agent.respond_stream('Hello Jarvis', lambda token: None), 'fast')
+        self.assertEqual(agent.respond_stream('Hello Jean', lambda token: None), 'fast')
         self.assertEqual(agent.respond_stream('Explain distributed consensus', lambda token: None), 'general')
         self.assertEqual(len(fast.calls), 1)
         self.assertEqual(len(general.calls), 1)

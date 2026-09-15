@@ -1,4 +1,4 @@
-# JARVIS v2.0: Automation, Vision, and Computer Control
+# Jean v2.0: Automation, Vision, and Computer Control
 
 local memory, web intelligence, push-to-talk input, Piper speech output, and
 wake-word detection. Phase 10 combines these capabilities into one voice-agent
@@ -6,7 +6,7 @@ loop while keeping model inference local.
 
 ## Model routing
 
-JARVIS can use up to five Ollama model roles without making redundant calls:
+Jean can use up to five Ollama model roles without making redundant calls:
 
 ```env
 JARVIS_MODEL=qwen3:8b
@@ -24,30 +24,31 @@ roles avoids unnecessary model swapping on machines with limited VRAM.
 
 ## Full voice agent
 
-The `/agent` command starts continuous wake-word mode. JARVIS listens for
-`Hey Jarvis`, transcribes the next command with Whisper, routes it through the
+The `/agent` command starts continuous wake-word mode. Jean listens for the
+configured acoustic trigger, transcribes the next command with Whisper, and routes it through the
 same Agent, approved tools, memory, web access, and permission checks as text
 chat, then optionally speaks the response through Piper. Say `stop listening`
 or press Ctrl+C to return to text mode.
 
-JARVIS now starts in voice-only mode by default. To start directly in
+Jean now starts in voice-only mode by default. To start directly in
 voice-agent mode, set:
 
 ```env
 JARVIS_VOICE_AGENT_ENABLED=true
 ```
 
-Voice-only mode activates the microphone at startup. Say `Hey Jarvis`, speak
-your command, and JARVIS responds through Piper. Say `stop listening` or press
+Voice-only mode activates the microphone at startup. The dashboard phrase is
+`Hey Jean`; the terminal retains its configured openWakeWord acoustic model.
+Jean responds through Piper. Say `stop listening` or press
 Ctrl+C to exit. Approval prompts also use push-to-talk voice confirmation.
 Set `JARVIS_VOICE_AGENT_ENABLED=false` only if you want the old text terminal.
 
-Phase 11 adds bounded coding assistance for the approved JARVIS and Sentrix
+Phase 11 adds bounded coding assistance for the approved Jean and Sentrix
 projects. Sentrix's approved test command is registered in `.jarvis-projects.json`;
 file inspection still requires its directory to be listed in `JARVIS_ALLOWED_ROOTS`.
 Set `JARVIS_CODING_MODEL` to an installed Ollama coding model, such as a Qwen
 Coder model, to route coding-oriented requests to that model. When unset,
-JARVIS uses the general model for all requests.
+Jean uses the general model for all requests.
 
 ## Local knowledge
 

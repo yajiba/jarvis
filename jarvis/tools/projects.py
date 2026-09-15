@@ -123,7 +123,7 @@ class ProjectManager:
         if self.status(project)['running']:
             raise ValueError('Project already has a running managed command')
         details = self.preview(project)
-        details['effect'] = 'Start this foreground project in the background; it remains managed in this JARVIS session'
+        details['effect'] = 'Start this foreground project in the background; it remains managed in this Jean session'
         return details
 
     def preview_stop(self, project: str) -> dict:

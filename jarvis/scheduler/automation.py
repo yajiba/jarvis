@@ -64,7 +64,7 @@ class Automation:
             raise ValueError('Recurrence must be none, daily, or weekly')
         return {**self.projects.preview(project, command), 'title': title,
                 'due_at': due.isoformat(), 'recurrence': recurrence,
-                'authorization': 'Run this exact configured command unattended at these times while JARVIS is running. Changed command configuration blocks execution.'}
+                'authorization': 'Run this exact configured command unattended at these times while Jean is running. Changed command configuration blocks execution.'}
 
     def schedule_command(self, title, project, command, due_at, recurrence):
         preview = self.command_preview(title, project, command, due_at, recurrence)

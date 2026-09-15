@@ -64,7 +64,7 @@ class PublicHTTPS:
                     if parsed.query:
                         target += '?' + quote(parsed.query, safe='/%?:@!$&\'()*+,;=-._~')
                     connection.request('GET', target, headers={
-                        'User-Agent': 'JARVIS/0.9 (personal assistant)',
+                        'User-Agent': 'Jean/2.0 (personal assistant)',
                         'Accept': 'text/html,application/json,application/rss+xml,text/plain,*/*;q=0.1',
                         'Accept-Encoding': 'identity',
                     })

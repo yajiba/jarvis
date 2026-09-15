@@ -1,4 +1,4 @@
-"""Run the JARVIS terminal chat."""
+"""Run the Jean terminal chat."""
 
 from jarvis.config import Settings
 from jarvis.brain import Agent
@@ -59,7 +59,7 @@ def finish_session(projects: ProjectManager, tools) -> None:
 
 
 def respond(agent: Agent, speaker: PiperSpeaker | None, user_input: str) -> None:
-    print("\nJARVIS: ", end="", flush=True)
+    print("\nJEAN: ", end="", flush=True)
     agent.respond_stream(
         user_input,
         on_token=lambda token: print(token, end="", flush=True),
@@ -69,7 +69,7 @@ def respond(agent: Agent, speaker: PiperSpeaker | None, user_input: str) -> None
         try:
             speaker.speak(agent.messages[-1].get("content", ""))
         except VoiceInputError as error:
-            print(f"JARVIS voice output error: {error}")
+            print(f"Jean voice output error: {error}")
 
 
 def voice_agent_loop(agent: Agent, speaker, wake_input) -> None:
@@ -79,10 +79,10 @@ def voice_agent_loop(agent: Agent, speaker, wake_input) -> None:
         try:
             wake_text = wake_input.listen_and_transcribe()
         except KeyboardInterrupt:
-            print("\nJARVIS: Voice agent stopped; returning to text.")
+            print("\nJEAN: Voice agent stopped; returning to text.")
             return
         except VoiceInputError as error:
-            print(f"JARVIS voice error: {error}")
+            print(f"Jean voice error: {error}")
             return
         print(f"You (wake word): {wake_text}")
         normalized = wake_text.strip().lower()
@@ -90,14 +90,14 @@ def voice_agent_loop(agent: Agent, speaker, wake_input) -> None:
             return
         if normalized == "/reset":
             agent.reset()
-            print("JARVIS: Conversation reset.")
+            print("JEAN: Conversation reset.")
             continue
         try:
             respond(agent, speaker, wake_text)
         except OllamaError as error:
-            print(f"JARVIS error: {error}")
+            print(f"Jean error: {error}")
         except VoiceInputError as error:
-            print(f"JARVIS voice error: {error}")
+            print(f"Jean voice error: {error}")
 
 
 def show_status(settings: Settings, root: Path) -> None:
@@ -117,7 +117,7 @@ def run() -> None:
         memory = MemoryStore(root / 'data' / 'jarvis.db')
         knowledge = KnowledgeStore(root / 'data' / 'knowledge.db', semantic=settings.rag_semantic_enabled)
     except (ValueError, OSError, RuntimeError, sqlite3.Error) as error:
-        print(f"JARVIS configuration error: {error}")
+        print(f"Jean configuration error: {error}")
         return
     try:
         run_session(settings, root, projects, memory, knowledge)
@@ -155,7 +155,7 @@ def run_session(settings, root, projects, memory, knowledge) -> None:
     speaker = PiperSpeaker(root / settings.piper_model) if settings.tts_enabled else None
     confirm = (lambda name, details: confirm_voice_action(name, details, voice_input, speaker)) if settings.voice_agent_enabled else confirm_action
     automation = Automation(root / 'data' / 'automation.db', projects,
-                            lambda event: print('\nJARVIS automation: ' + json.dumps(event, ensure_ascii=True)))
+                            lambda event: print('\nJean automation: ' + json.dumps(event, ensure_ascii=True)))
     vision = Vision(settings, (root, *settings.allowed_roots))
     from jarvis.tools.presentations import Presentations
     presentations = Presentations((root, *settings.allowed_roots))
@@ -166,14 +166,14 @@ def run_session(settings, root, projects, memory, knowledge) -> None:
                                presentations=presentations)
     agent = Agent(client, coding_client=coding_client, fast_client=fast_client,
                   tools=tools, memory=memory)
-    scheduler = TaskScheduler(memory, lambda task: print(f"\nJARVIS reminder: {task['title']}"), automation=automation)
+    scheduler = TaskScheduler(memory, lambda task: print(f"\nJean reminder: {task['title']}"), automation=automation)
     scheduler.start()
 
     configured_models = [settings.model, settings.fast_model, settings.coding_model,
                          settings.document_model, settings.vision_model]
-    print(f"JARVIS v2.0 voice-only | models: {len(set(filter(None, configured_models)))} | "
+    print(f"Jean v2.0 voice-only | models: {len(set(filter(None, configured_models)))} | "
           f"general: {settings.model} | web: {'on' if settings.web_enabled else 'off'}")
-    print("Say Hey Jarvis to speak. Say stop listening or press Ctrl+C to exit.")
+    print("Jean is ready. The terminal acoustic trigger remains Hey Jarvis until a custom Hey Jean model is configured.")
 
     try:
         if settings.voice_agent_enabled:
@@ -190,17 +190,17 @@ def chat_loop(agent, speaker, voice_input, wake_input, settings, root) -> None:
         try:
             user_input = input("\nYou: ").strip()
         except (EOFError, KeyboardInterrupt):
-            print("\nJARVIS: Session ended.")
+            print("\nJEAN: Session ended.")
             return
 
         if not user_input:
             continue
         if user_input.lower() in {"/exit", "/quit"}:
-            print("JARVIS: Goodbye.")
+            print("JEAN: Goodbye.")
             return
         if user_input.lower() == "/reset":
             agent.reset()
-            print("JARVIS: Conversation reset.")
+            print("JEAN: Conversation reset.")
             continue
         if user_input.lower() == '/status':
             show_status(settings, root)
@@ -210,10 +210,10 @@ def chat_loop(agent, speaker, voice_input, wake_input, settings, root) -> None:
                 user_input = voice_input.listen_and_transcribe()
                 print(f"You (voice): {user_input}")
             except VoiceInputError as error:
-                print(f"JARVIS voice error: {error}")
+                print(f"Jean voice error: {error}")
                 continue
             except KeyboardInterrupt:
-                print('\nJARVIS: Voice input cancelled; returning to text.')
+                print('\nJEAN: Voice input cancelled; returning to text.')
                 continue
             if user_input.lower() in {'/exit', '/quit', 'exit', 'quit'}:
                 return
@@ -227,10 +227,10 @@ def chat_loop(agent, speaker, voice_input, wake_input, settings, root) -> None:
         try:
             respond(agent, speaker, user_input)
         except OllamaError as error:
-            print(f"\nJARVIS error: {error}")
+            print(f"\nJean error: {error}")
             continue
         except KeyboardInterrupt:
-            print("\nJARVIS: Session ended.")
+            print("\nJEAN: Session ended.")
             return
 
 

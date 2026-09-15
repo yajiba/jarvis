@@ -117,7 +117,7 @@ def create_local_tools(root: Path, confirm: Callable[[str, dict], bool] | None =
 
     def close_preview(name: str) -> dict:
         if name not in applications or applications[name].poll() is not None:
-            raise ValueError('No running application process owned by this JARVIS session')
+            raise ValueError('No running application process owned by this Jean session')
         return {'application': name, 'pid': applications[name].pid,
                 'effect': 'Ask its windows to close; save dialogs may require your attention'}
 
@@ -230,7 +230,7 @@ def create_local_tools(root: Path, confirm: Callable[[str, dict], bool] | None =
         Tool('list_files', 'List up to 200 entries in a project folder. Use . for the root.', _parameters('path'), list_files),
         Tool('read_file', 'Read a UTF-8 project file up to 32 KiB. Hidden and credential paths are blocked.', _parameters('path'), read_file),
         Tool('search_files', 'Search project filenames using a glob such as *.py. Returns up to 200 matches.', _parameters('pattern'), search_files),
-        Tool('list_allowed_roots', 'List the approved local folders JARVIS may inspect.', _parameters(), list_allowed_roots),
+        Tool('list_allowed_roots', 'List the approved local folders Jean may inspect.', _parameters(), list_allowed_roots),
           Tool('remember_memory', 'Save an important user fact for future conversations.', _parameters('content'), remember_memory),
           Tool('set_preference', 'Save a named user preference for future conversations.',
              {'type': 'object', 'properties': {'key': {'type': 'string'}, 'value': {'type': 'string'}},

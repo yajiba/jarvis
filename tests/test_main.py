@@ -23,4 +23,4 @@ class TerminalTests(unittest.TestCase):
                 patch('builtins.input') as user_input, redirect_stdout(output):
             main.run()
         user_input.assert_not_called()
-        self.assertIn('JARVIS configuration error: OLLAMA_HOST', output.getvalue())
+        self.assertIn('Jean configuration error: OLLAMA_HOST', output.getvalue())

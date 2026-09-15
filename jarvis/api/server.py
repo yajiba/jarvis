@@ -1,4 +1,4 @@
-"""Optional FastAPI dashboard for the local JARVIS runtime."""
+"""Optional FastAPI dashboard for the local Jean runtime."""
 
 from pathlib import Path
 from typing import Any
@@ -37,7 +37,7 @@ def create_app(agent: Any, memory: MemoryStore, settings: Any = None, tools: Any
                 from starlette.concurrency import run_in_threadpool
                 await run_in_threadpool(scheduler.stop)
 
-    app = FastAPI(title="JARVIS Dashboard", version="2.0", lifespan=lifespan)
+    app = FastAPI(title="Jean Dashboard", version="2.0", lifespan=lifespan)
     from starlette.middleware.trustedhost import TrustedHostMiddleware
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=['localhost','127.0.0.1','[::1]','testserver'])
 
@@ -175,7 +175,7 @@ def create_app(agent: Any, memory: MemoryStore, settings: Any = None, tools: Any
             raise HTTPException(status_code=400, detail="message must be a nonempty string")
         tokens: list[str] = []
         if not chat_lock.acquire(blocking=False):
-            raise HTTPException(status_code=409, detail="JARVIS is handling another message. Please wait.")
+            raise HTTPException(status_code=409, detail="Jean is handling another message. Please wait.")
         try:
             activity["state"] = "Thinking"
             response = agent.respond_stream(message, tokens.append)
@@ -206,7 +206,7 @@ def create_app(agent: Any, memory: MemoryStore, settings: Any = None, tools: Any
         if not data or len(data) > MAX_UPLOAD_BYTES:
             raise HTTPException(status_code=413, detail='Uploads must contain 1 byte to 20 MiB')
         if not chat_lock.acquire(blocking=False):
-            raise HTTPException(status_code=409, detail='JARVIS is handling another message. Please wait.')
+            raise HTTPException(status_code=409, detail='Jean is handling another message. Please wait.')
         try:
             activity['state'] = 'Analyzing upload'
             if Path(name).suffix.lower() in IMAGE_EXTENSIONS:
@@ -244,7 +244,7 @@ def create_app(agent: Any, memory: MemoryStore, settings: Any = None, tools: Any
             document_contexts.pop(context_id, None)
             raise HTTPException(status_code=404, detail='Document context expired; attach the file again')
         if not chat_lock.acquire(blocking=False):
-            raise HTTPException(status_code=409, detail='JARVIS is handling another message. Please wait.')
+            raise HTTPException(status_code=409, detail='Jean is handling another message. Please wait.')
         try:
             activity['state'] = 'Reviewing ' + prepared['filename']
             result = await run_in_threadpool(
@@ -314,7 +314,7 @@ def main() -> None:
     agent = Agent(OllamaClient(settings.ollama_host, settings.model, settings.timeout_seconds),
                   coding_client=coding_client, fast_client=fast_client, tools=tools, memory=memory)
     try:
-        scheduler = TaskScheduler(memory, lambda task: print('JARVIS reminder: ' + task['title']), automation=automation)
+        scheduler = TaskScheduler(memory, lambda task: print('Jean reminder: ' + task['title']), automation=automation)
         uvicorn.run(create_app(agent, memory, settings, tools, scheduler, automation, approvals,
                                vision, document_client), host="127.0.0.1", port=8765)
     finally:

@@ -13,8 +13,8 @@ const context={document,window:{AudioContext:FakeContext,addEventListener(){}},A
 vm.createContext(context);vm.runInContext(script,context);
 (async()=>{
  await new Promise(setImmediate);
- assert.equal(vm.runInContext("extractWakeCommand('Hey Jarvis, what time is it?')",context),'what time is it?');
- assert.equal(vm.runInContext("extractWakeCommand('Jarvis')",context),'');
+ assert.equal(vm.runInContext("extractWakeCommand('Hey Jean, what time is it?')",context),'what time is it?');
+ assert.equal(vm.runInContext("extractWakeCommand('Jean')",context),'');
  assert.equal(vm.runInContext("extractWakeCommand('ordinary background speech')",context),null);
  assert.equal(vm.runInContext("speechText('## **All done!** 😊 [Open it](https://example.com)')",context),'All done! Open it');
  vm.runInContext('muted=true',context);await vm.runInContext("send('hello')",context);
