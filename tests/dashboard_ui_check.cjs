@@ -5,9 +5,10 @@ const nodes=new Map();const document={querySelectorAll(){return [];},querySelect
 let reply={response:'Hello **friend**'},speechCalls=0,uploadCalls=0,audioPaused=false;
 class FakeAudio{constructor(){this.paused=true;}async play(){this.paused=false;this.onplaying?.();}pause(){audioPaused=true;this.paused=true;}}
 class FakeContext{resume(){return Promise.resolve();}createMediaElementSource(){return {connect(){},disconnect(){}};}createAnalyser(){return {fftSize:256,connect(){},getByteTimeDomainData(data){data.fill(150);}};}}
-const context={document,window:{AudioContext:FakeContext,addEventListener(){}},Audio:FakeAudio,URL:{createObjectURL:()=> 'blob:test',revokeObjectURL(){}},AbortController,AbortSignal,console,performance,setTimeout:()=>1,clearTimeout(){},setInterval:()=>1,clearInterval(){},requestAnimationFrame:()=>1,cancelAnimationFrame(){},fetch:async url=>{
+const context={document,window:{AudioContext:FakeContext,addEventListener(){}},Audio:FakeAudio,URL:{createObjectURL:()=> 'blob:test',revokeObjectURL(){}},AbortController,AbortSignal,TextDecoder,Node:{TEXT_NODE:3},console,performance,setTimeout:()=>1,clearTimeout(){},setInterval:()=>1,clearInterval(){},requestAnimationFrame:()=>1,cancelAnimationFrame(){},fetch:async url=>{
  if(url==='/speech'){speechCalls++;return {ok:true,blob:async()=>({})};}
  if(url==='/analyze-upload'){uploadCalls++;return {ok:true,json:async()=>({answer:'A test attachment.'})};}
+ if(url==='/chat-stream'){const bytes=new TextEncoder().encode(JSON.stringify({type:'done',response:reply.response,diagnostics:{}})+'\n');let sent=false;return {ok:true,status:200,body:{getReader(){return {async read(){if(sent)return {done:true};sent=true;return {done:false,value:bytes};}}}}};}
  return {ok:true,json:async()=>url==='/chat'?reply:url==='/runtime'?{connection:'ready',voice:'en_US-amy-medium',engine:'Piper',voice_enabled:true}:{hardware:{},model:'test'}};
 }};
 vm.createContext(context);vm.runInContext(script,context);

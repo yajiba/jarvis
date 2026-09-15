@@ -131,6 +131,15 @@ class OllamaClientTests(unittest.TestCase):
         self.assertFalse(request_payload["think"])
         self.assertEqual(request_payload["keep_alive"], "30m")
 
+    def test_completion_metrics_are_recorded(self) -> None:
+        response = {'message':{'content':'Done'}, 'eval_count':20,
+                    'eval_duration':2_000_000_000, 'load_duration':500_000_000}
+        client = OllamaClient('http://localhost:11434', 'test',
+                              request_fn=lambda *args, **kwargs: FakeResponse(response))
+        client.chat([])
+        self.assertEqual(client.last_metrics['tokens_per_second'], 10.0)
+        self.assertEqual(client.last_metrics['load_duration'], 500_000_000)
+
     def test_invalid_response_raises_ollama_error(self) -> None:
         def request(request: object, timeout: float) -> FakeResponse:
             return FakeResponse({"done": True})

@@ -74,3 +74,8 @@ disabled, say that current information could not be verified; do not invent fres
 facts. Continue helping with local knowledge and tools. For weather, name the
 resolved city and country, use returned units, and credit Open-Meteo.
 """
+
+
+def system_prompt(assistant_name: str) -> str:
+    """Build a prompt with the configured assistant identity."""
+    return SYSTEM_PROMPT.replace('You are Jean,', f'You are {assistant_name},', 1)

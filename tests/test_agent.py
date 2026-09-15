@@ -108,6 +108,16 @@ class AgentTests(unittest.TestCase):
         self.assertIn('second', [item.get('content') for item in context])
         self.assertEqual(context[-1]['content'], 'third')
 
+    def test_persisted_conversation_can_be_restored(self) -> None:
+        agent = Agent(FakeClient(), system_prompt='identity')
+        agent.restore('saved-id', [
+            {'role':'user', 'content':'Earlier question'},
+            {'role':'tool', 'content':'orphaned tool data', 'tool_name':'test'},
+            {'role':'assistant', 'content':'Earlier answer'},
+        ])
+        self.assertEqual(agent.conversation_id, 'saved-id')
+        self.assertEqual([item['role'] for item in agent.messages], ['system','user','assistant'])
+
 
 if __name__ == "__main__":
     unittest.main()

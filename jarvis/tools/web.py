@@ -9,6 +9,8 @@ import re
 import socket
 import ssl
 import time
+from copy import deepcopy
+from threading import Lock
 from urllib.parse import quote, urlencode, urljoin, urlsplit
 import xml.etree.ElementTree as ET
 
@@ -143,9 +145,27 @@ def text_from_html(value: str) -> str:
 
 
 class WebClient:
-    def __init__(self, transport=None, enabled: bool = True):
+    def __init__(self, transport=None, enabled: bool = True, search_url: str | None = None):
         self.transport = transport if transport is not None else PublicHTTPS()
         self.enabled = enabled
+        self.search_url = search_url
+        self._search_cache = {}
+        self._cache_lock = Lock()
+
+    def _cached(self, key):
+        with self._cache_lock:
+            item = self._search_cache.get(key)
+            if item and time.monotonic() - item[0] < 300:
+                return deepcopy(item[1])
+        return None
+
+    def _remember_search(self, key, result):
+        with self._cache_lock:
+            if len(self._search_cache) >= 32:
+                oldest = min(self._search_cache, key=lambda item:self._search_cache[item][0])
+                self._search_cache.pop(oldest, None)
+            self._search_cache[key] = (time.monotonic(), deepcopy(result))
+        return result
 
     def _get(self, url):
         if not self.enabled:
@@ -199,20 +219,48 @@ class WebClient:
 
     def web_search(self, query: str):
         query = self._query(query)
+        key = ('web', query.casefold())
+        cached = self._cached(key)
+        if cached is not None:
+            cached['cached'] = True
+            return cached
+        if self.search_url:
+            response = self._get(self.search_url + '/search?' + urlencode({'q': query, 'format': 'json'}))
+            try:
+                payload = json.loads(response['body'])
+                items = payload.get('results', [])
+                results = [{'title': str(item.get('title', ''))[:300],
+                            'url': str(item.get('url', '')),
+                            'snippet': str(item.get('content', ''))[:1000],
+                            'published_at': item.get('publishedDate')}
+                           for item in items[:5]
+                           if isinstance(item, dict) and urlsplit(str(item.get('url', ''))).scheme in {'http', 'https'}]
+            except (ValueError, TypeError, RecursionError) as error:
+                raise WebError('The configured search provider returned invalid JSON') from error
+            return self._remember_search(key, {**self._stamp(response['url']), 'provider': 'SearXNG',
+                    'results': results, 'note': 'Search snippets are leads, not verified source contents.'})
         result = self._feed('https://www.bing.com/search?' + urlencode({'q': query, 'format': 'rss'}))
         result['provider'] = 'Bing'
         if self._relevant_results(query, result['results']):
-            return result
+            return self._remember_search(key, result)
         fallback = self._feed('https://news.google.com/rss/search?' + urlencode({
             'q': query, 'hl': 'en-US', 'gl': 'US', 'ceid': 'US:en'}))
         fallback['provider'] = 'Google News fallback'
         fallback['note'] = ('Bing returned no relevant matches, so these are fallback news results. '
                             'Search snippets are leads; open primary sources to verify claims.')
-        return fallback
+        return self._remember_search(key, fallback)
 
     def news_search(self, query: str):
-        return self._feed('https://news.google.com/rss/search?' + urlencode({
-            'q': self._query(query), 'hl': 'en-US', 'gl': 'US', 'ceid': 'US:en'}))
+        query = self._query(query)
+        key = ('news', query.casefold())
+        cached = self._cached(key)
+        if cached is not None:
+            cached['cached'] = True
+            return cached
+        result = self._feed('https://news.google.com/rss/search?' + urlencode({
+            'q': query, 'hl': 'en-US', 'gl': 'US', 'ceid': 'US:en'}))
+        result['provider'] = 'Google News'
+        return self._remember_search(key, result)
 
     def read_web(self, url: str):
         response = self._get(url)

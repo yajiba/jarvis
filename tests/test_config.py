@@ -104,3 +104,13 @@ class SettingsTests(unittest.TestCase):
                 with self.subTest(name=name), patch.dict(os.environ, {name: value}):
                     with self.assertRaisesRegex(ValueError, name):
                         Settings.from_environment(path)
+
+    def test_identity_and_search_provider_are_configurable(self):
+        with TemporaryDirectory() as directory, patch.dict(os.environ, {
+                'ASSISTANT_NAME':'Jean', 'JARVIS_SEARCH_URL':'https://search.example.com'}, clear=True):
+            settings = Settings.from_environment(Path(directory) / '.env')
+            self.assertEqual(settings.assistant_name, 'Jean')
+            self.assertEqual(settings.search_url, 'https://search.example.com')
+            with patch.dict(os.environ, {'ASSISTANT_NAME':'<script>'}, clear=True):
+                with self.assertRaisesRegex(ValueError, 'ASSISTANT_NAME'):
+                    Settings.from_environment(Path(directory) / '.env')

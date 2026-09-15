@@ -47,7 +47,7 @@
 <section class="card" id="today"><div class="card-head"><h2>Today</h2><small id="today-count">Scheduled tasks</small></div><div class="schedule" id="schedule"><p class="empty">Loading your schedule...</p></div></section>
 <section class="card" id="tasks-panel"><div class="card-head"><h2>Open tasks</h2><button type="button" data-prompt="Add a task to ">+ Add task</button></div><div id="tasks" class="tasks"><p class="empty">Loading your tasks...</p></div><span id="task-count" hidden>0</span></section>
 <details class="card health" id="system-panel"><summary>System health <span id="model-connection">Checking model...</span></summary><section class="metrics" aria-label="System telemetry"><div class="metric"><div class="metric-label">CPU</div><div class="metric-value" id="cpu">--</div></div><div class="metric"><div class="metric-label">RAM</div><div class="metric-value" id="ram">--</div></div><div class="metric"><div class="metric-label">GPU</div><div class="metric-value" id="gpu">--</div></div><div class="metric"><div class="metric-label">VOICE</div><div class="metric-value" id="voice">--</div></div></section><div class="runtime-info"><span id="voice-name">Piper voice</span><span id="reply-time">No replies yet</span></div></details>
-<section class="card console" id="conversation"><div class="console-heading"><span>Conversation</span><span id="message-count">0</span></div><div class="transcript" id="transcript" aria-live="polite"><div class="message ai"><div class="message-label">JEAN</div><div class="message-text">I'm here. Let's make room for what matters.</div></div></div></section>
+<section class="card console" id="conversation"><div class="console-heading"><span>Conversation</span><button type="button" id="conversation-history">History</button><span id="message-count">0</span></div><div class="transcript" id="transcript" aria-live="polite"><div class="message ai"><div class="message-label">JEAN</div><div class="message-text">I'm here. Let's make room for what matters.</div></div></div></section>
 <section class="card" id="memory-panel"><div class="card-head"><h2>Memory</h2><button type="button" data-prompt="Remember that ">+ Remember</button></div><div class="memory-list" id="memory-list"><p class="empty">Loading saved memories...</p></div></section>
 <section class="card"><div class="card-head"><h2>Connections</h2><a href="#system-panel">Details &rarr;</a></div><div class="connection-list"><div>Language model &middot; <span id="model">Checking</span></div><div id="system-state" class="system-state" role="status">Checking Ollama...</div><div>Speech &middot; <span>Local Piper</span></div><div>Memory &middot; <span>Local storage</span></div></div></section>
 <div class="card bottom-note"><span>Small steps, big progress.</span><b>JEAN</b></div>
@@ -56,18 +56,19 @@ const TIME_ZONE = 'Asia/Taipei';
 const dayKey = date => date.toLocaleDateString('en-CA', {timeZone: TIME_ZONE});
 const $ = selector => document.querySelector(selector);
 const panel=$('#face-panel'), transcript=$('#transcript');
-let busy=false, listening=false, preparing=false, speaking=false, muted=false, online=false, activity='Thinking', count=0;
+let busy=false, listening=false, preparing=false, speaking=false, muted=false, online=false, activity='Thinking', count=0,assistantName='Jean';
 let attachedFile=null,documentContext=null,attachmentPreviewUrl=null;
+let activeRequestController=null;
 let audioContext, audio, audioUrl, speechController, micStream, meterSource, frame, micStarting=false;
 let micEnabled=true, recognitionRunning=false, wakeArmed=false, wakeTimer=null, recognitionRestart=null,lastWakeText='',lastWakeAt=0;
 let analysisTimeoutMs=615000;
 const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
 const recognition=Recognition ? new Recognition() : null;
 function paint(){
- const state=busy?activity:preparing?'Preparing voice':speaking?'Speaking':wakeArmed?'Listening':listening?'Say “Hey Jean”':online?'Ready':'Disconnected';
+ const state=busy?activity:preparing?'Preparing voice':speaking?'Speaking':wakeArmed?'Listening':listening?'Say “Hey '+assistantName+'”':online?'Ready':'Disconnected';
  $('#face-status').textContent=state;
  panel.classList.toggle('listening',wakeArmed);panel.classList.toggle('processing',busy||preparing);panel.classList.toggle('speaking',speaking);
- $('#stop-voice').disabled=!(speaking||preparing);$('#talk-button').disabled=!recognition||micStarting;
+ $('#stop-voice').disabled=!(speaking||preparing||busy);$('#stop-voice').textContent=busy?'Stop response':'Stop speaking';$('#talk-button').disabled=!recognition||micStarting;
  $('#talk-button').textContent=micEnabled?'Mic on':'Mic off';$('#talk-button').setAttribute('aria-pressed',String(micEnabled));
 }
 async function request(url,options={}){
@@ -75,9 +76,14 @@ async function request(url,options={}){
  try{data=await result.json();}catch{throw Error('The server returned an unreadable response.');}
  if(!result.ok){const error=Error(typeof data.detail==='string'?data.detail:'Request failed (HTTP '+result.status+').');error.status=result.status;throw error;}return data;
 }
-async function requestChat(text,signal){
- while(true){try{return await request('/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text}),signal});}
- catch(error){if(error.status!==409)throw error;activity='Waiting for previous reply';paint();await new Promise(resolve=>setTimeout(resolve,700));if(signal.aborted){const aborted=Error('Reply aborted');aborted.name='AbortError';throw aborted;}}}
+async function requestChat(text,signal,onToken){
+ while(true){const response=await fetch('/chat-stream',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text}),signal});
+  if(response.status===409){activity='Waiting for previous reply';paint();await new Promise(resolve=>setTimeout(resolve,700));continue;}
+  if(!response.ok){let data={};try{data=await response.json();}catch{}throw Error(data.detail||'Request failed (HTTP '+response.status+').');}
+  const reader=response.body.getReader(),decoder=new TextDecoder();let buffer='',result=null;
+  while(true){const part=await reader.read();buffer+=decoder.decode(part.value||new Uint8Array(),{stream:!part.done});const lines=buffer.split('\n');buffer=lines.pop();for(const line of lines){if(!line.trim())continue;const event=JSON.parse(line);if(event.type==='token')onToken(event.value);if(event.type==='error')throw Error(event.error);if(event.type==='done')result=event;}if(part.done)break;}
+  if(!result)throw Error('Reply stream ended unexpectedly.');return result;
+ }
 }
 async function requestUpload(file,question,signal){
  const options={method:'POST',headers:{'Content-Type':'application/octet-stream','X-Filename':encodeURIComponent(file.name),'X-Question':encodeURIComponent(question)},body:file,signal};
@@ -106,7 +112,7 @@ function markdown(parent,text){
 }
 function message(text,user=false,seconds=null){
  const entry=document.createElement('div');entry.className='message '+(user?'user':'ai');
- const label=document.createElement('div');label.className='message-label';label.textContent=(user?'YOU':'JEAN')+' / '+new Date().toLocaleTimeString('en-GB', {timeZone: TIME_ZONE});
+ const label=document.createElement('div');label.className='message-label';label.textContent=(user?'YOU':assistantName.toUpperCase())+' / '+new Date().toLocaleTimeString('en-GB', {timeZone: TIME_ZONE});
  const body=document.createElement('div');body.className='message-text';if(user){body.textContent=text;}else markdown(body,text);
  entry.append(label,body);if(seconds!==null){const timing=document.createElement('div');timing.className='reply-duration';timing.textContent='Reply in '+seconds+' s';entry.append(timing);}
  transcript.append(entry);$('#message-count').textContent=++count;transcript.scrollTop=transcript.scrollHeight;return entry;
@@ -147,7 +153,8 @@ async function speak(text){
  finally{clearTimeout(timeout);}
 }
 function clearWakeArm(){wakeArmed=false;if(wakeTimer)clearTimeout(wakeTimer);wakeTimer=null;paint();}
-function extractWakeCommand(text){const match=text.trim().match(/^(?:(?:hey|hi|okay|ok)\s+)?jean\b[\s,.:;-]*(.*)$/i);return match?match[1].trim():null;}
+function extractWakeCommand(text){const escaped=assistantName.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');const match=text.trim().match(new RegExp('^(?:(?:hey|hi|okay|ok)\\s+)?'+escaped+'\\b[\\s,.:;-]*(.*)$','i'));return match?match[1].trim():null;}
+function applyIdentity(name){if(typeof name!=='string'||!name.trim())return;assistantName=name.trim();document.title=assistantName.toUpperCase()+' / Personal intelligence';$('#command').setAttribute('aria-label','Message '+assistantName);$('#command').placeholder='Ask '+assistantName+' anything...';const logo=$('.logo');for(const node of logo.childNodes)if(node.nodeType===Node.TEXT_NODE&&node.textContent.trim())node.textContent=assistantName.toUpperCase().split('').join('.');for(const label of document.querySelectorAll('.message.ai .message-label'))if(!label.textContent.includes('/'))label.textContent=assistantName.toUpperCase();}
 function pauseWakeListening(){if(recognitionRestart)clearTimeout(recognitionRestart);recognitionRestart=null;if(recognitionRunning){try{recognition.abort();}catch{}}recognitionRunning=false;listening=false;paint();}
 function scheduleWakeListening(delay=450){
  if(recognitionRestart)clearTimeout(recognitionRestart);if(!micEnabled||!recognition||busy||preparing||speaking)return;
@@ -185,11 +192,11 @@ async function send(text){
  if(busy)return;if(attachedFile)return analyzeUpload(attachedFile,text.trim()||'What is this file all about?');if(documentContext&&text.trim())return analyzeContext(documentContext,text.trim());if(!text.trim())return;pauseWakeListening();stopVoice();busy=true;activity='Thinking';paint();message(text,true);$('#command-form button[type=submit]').disabled=true;
  const pending=document.createElement('div');pending.className='pending';pending.setAttribute('role','status');transcript.append(pending);
  const start=performance.now();const timer=setInterval(()=>{pending.textContent=activity+' \u00b7 '+Math.floor((performance.now()-start)/1000)+' s';},500);
- const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),120000);
- try{const data=await requestChat(text,controller.signal);if(!data.response?.trim())throw Error('The model returned an empty reply.');
- const seconds=((performance.now()-start)/1000).toFixed(1);message(data.response,false,seconds);showTextOutput('Jean response',data.response,'Complete · '+seconds+' s');$('#reply-time').textContent='Last reply: '+seconds+' s';busy=false;speak(data.response);
+ const controller=new AbortController();activeRequestController=controller;const timeout=setTimeout(()=>controller.abort(),120000);
+ let streamed='';try{const data=await requestChat(text,controller.signal,token=>{streamed+=token;pending.textContent=streamed;});if(!data.response?.trim())throw Error('The model returned an empty reply.');
+ const seconds=((performance.now()-start)/1000).toFixed(1),speed=data.diagnostics?.metrics?.tokens_per_second,model=data.diagnostics?.model;message(data.response,false,seconds);showTextOutput('Jean response',data.response,'Complete · '+seconds+' s'+(model?' · '+model:'')+(speed?' · '+speed+' tok/s':''));$('#reply-time').textContent='Last reply: '+seconds+' s'+(speed?' · '+speed+' tok/s':'');busy=false;speak(data.response);
  }catch(error){message(error.name==='AbortError'?'Reply timed out after two minutes.':error.message).classList.add('error');}
- finally{busy=false;clearInterval(timer);clearTimeout(timeout);pending.remove();$('#command-form button[type=submit]').disabled=false;paint();scheduleWakeListening();dashboardData();}
+ finally{if(activeRequestController===controller)activeRequestController=null;busy=false;clearInterval(timer);clearTimeout(timeout);pending.remove();$('#command-form button[type=submit]').disabled=false;paint();scheduleWakeListening();dashboardData();}
 }
 function attachUpload(file){
  if(!file||busy)return;if(file.size<1||file.size>20*1024*1024){$('#voice-hint').textContent='Choose a file between 1 byte and 20 MiB.';return;}
@@ -200,18 +207,18 @@ function retainDocumentContext(data,file){attachedFile=null;documentContext={id:
 async function analyzeUpload(file,question){
  pauseWakeListening();stopVoice();busy=true;activity='Analyzing '+file.name;paint();message(question+' ['+file.name+']',true);$('#output-status').textContent='Analyzing';const answer=$('#output-answer');answer.replaceChildren();const outputPending=document.createElement('div');outputPending.className='pending';outputPending.textContent='Reading and analyzing '+file.name+'…';answer.append(outputPending);setWorkspaceView('output');$('#command-form button[type=submit]').disabled=true;
  const pending=document.createElement('div');pending.className='pending';pending.setAttribute('role','status');pending.textContent='Reading '+file.name+'…';transcript.append(pending);
- const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),analysisTimeoutMs);
- try{const data=await requestUpload(file,question,controller.signal);if(!data.answer?.trim())throw Error('The model returned an empty file analysis.');message(data.answer);const detail=data.slide_count?'Complete · '+data.slide_count+' slides'+(data.content_truncated?' · condensed':''):'Complete';showTextOutput('Analysis · '+file.name,data.answer,detail,true);if(data.context_id)retainDocumentContext(data,file);else clearAttachment(true);busy=false;speak(data.answer);}
+ const controller=new AbortController();activeRequestController=controller;const timeout=setTimeout(()=>controller.abort(),analysisTimeoutMs);
+ try{const data=await requestUpload(file,question,controller.signal);if(!data.answer?.trim())throw Error('The model returned an empty file analysis.');message(data.answer);const speed=data.metrics?.tokens_per_second,detail=(data.slide_count?'Complete · '+data.slide_count+' slides'+(data.content_truncated?' · condensed':''):'Complete')+(data.model?' · '+data.model:'')+(speed?' · '+speed+' tok/s':'');showTextOutput('Analysis · '+file.name,data.answer,detail,true);if(data.context_id)retainDocumentContext(data,file);else clearAttachment(true);busy=false;speak(data.answer);}
  catch(error){const detail=error.name==='AbortError'?'File analysis timed out after '+Math.round(analysisTimeoutMs/60000)+' minutes.':error.message;message(detail).classList.add('error');showTextOutput('Analysis · '+file.name,detail,'Failed',true);}
- finally{busy=false;clearTimeout(timeout);pending.remove();$('#command-form button[type=submit]').disabled=false;paint();scheduleWakeListening();}
+ finally{if(activeRequestController===controller)activeRequestController=null;busy=false;clearTimeout(timeout);pending.remove();$('#command-form button[type=submit]').disabled=false;paint();scheduleWakeListening();}
 }
 async function analyzeContext(context,question){
  pauseWakeListening();stopVoice();busy=true;activity='Reviewing '+context.filename;paint();message(question+' ['+context.filename+']',true);$('#command-form button[type=submit]').disabled=true;
  const pending=document.createElement('div');pending.className='pending';pending.setAttribute('role','status');pending.textContent='Reviewing saved file context…';transcript.append(pending);
- const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),analysisTimeoutMs);
+ const controller=new AbortController();activeRequestController=controller;const timeout=setTimeout(()=>controller.abort(),analysisTimeoutMs);
  try{const data=await requestDocumentContext(context.id,question,controller.signal);if(!data.answer?.trim())throw Error('The model returned an empty file analysis.');message(data.answer);showTextOutput('Follow-up · '+context.filename,data.answer,'Complete · context retained',true);busy=false;speak(data.answer);}
  catch(error){const detail=error.name==='AbortError'?'Follow-up timed out.':error.message;if(error.status===404)clearAttachment(true);message(detail).classList.add('error');showTextOutput('Follow-up · '+context.filename,detail,'Failed',true);}
- finally{busy=false;clearTimeout(timeout);pending.remove();$('#command-form button[type=submit]').disabled=false;paint();scheduleWakeListening();}
+ finally{if(activeRequestController===controller)activeRequestController=null;busy=false;clearTimeout(timeout);pending.remove();$('#command-form button[type=submit]').disabled=false;paint();scheduleWakeListening();}
 }
 let refreshing=false;
 async function refresh(){if(refreshing)return;refreshing=true;
@@ -220,7 +227,7 @@ async function refresh(){if(refreshing)return;refreshing=true;
  $('#ram').textContent=hw.ram_total_bytes?Math.round((1-hw.ram_free_bytes/hw.ram_total_bytes)*100)+'%':'Unavailable';$('#gpu').textContent=hw.gpu_metrics?.available?'Available':'Unavailable';$('#voice').textContent=data.voice_ready?'Ready':'Unavailable';
  }catch{online=false;$('#model-connection').textContent='Dashboard offline';}finally{refreshing=false;paint();}}
 let pollingRuntime=false;
-async function runtime(){if(pollingRuntime)return;pollingRuntime=true;try{const data=await request('/runtime',{signal:AbortSignal.timeout(5000)});if(Number.isFinite(data.timeout_seconds)&&data.timeout_seconds>0)analysisTimeoutMs=(data.timeout_seconds+15)*1000;$('#model-connection').textContent='Ollama: '+data.connection;$('#system-state').textContent='Ollama: '+data.connection;$('#system-state').dataset.state=data.connection==='ready'?'online':'offline';$('#voice-name').textContent=(data.voice||'Unknown voice').replace(/^en_US-/, '').replace(/-medium$/, '')+' \u00b7 '+data.engine+(data.voice_enabled?'':' (disabled)');}catch{$('#system-state').textContent='Model status unavailable';$('#system-state').dataset.state='offline';}finally{pollingRuntime=false;}}
+async function runtime(){if(pollingRuntime)return;pollingRuntime=true;try{const data=await request('/runtime',{signal:AbortSignal.timeout(5000)});applyIdentity(data.assistant_name);if(Number.isFinite(data.timeout_seconds)&&data.timeout_seconds>0)analysisTimeoutMs=(data.timeout_seconds+15)*1000;const missing=Object.entries(data.model_status||{}).filter(([,state])=>state==='missing').map(([role])=>role);$('#model-connection').textContent=missing.length?'Missing: '+missing.join(', '):'Ollama: '+data.connection;$('#system-state').textContent=missing.length?'Model setup incomplete':'Ollama: '+data.connection;$('#system-state').dataset.state=data.connection==='ready'&&!missing.length?'online':'offline';$('#voice-name').textContent=(data.voice||'Unknown voice').replace(/^en_US-/, '').replace(/-medium$/, '')+' \u00b7 '+data.engine+(data.voice_enabled?'':' (disabled)');}catch{$('#system-state').textContent='Model status unavailable';$('#system-state').dataset.state='offline';}finally{pollingRuntime=false;}}
 let pollingActivity=false;
 async function pollActivity(){if(!busy||pollingActivity)return;pollingActivity=true;try{const data=await request('/activity',{signal:AbortSignal.timeout(2000)});if(busy&&data.state!=='Ready'){activity=data.state;paint();}}catch{}finally{pollingActivity=false;}}
 $('#command-form').addEventListener('submit',event=>{event.preventDefault();const input=$('#command');if((!input.value.trim()&&!attachedFile)||busy)return;unlockAudio();send(input.value);input.value='';});
@@ -228,13 +235,14 @@ $('#file-upload').addEventListener('change',event=>attachUpload(event.target.fil
 $('#remove-attachment').addEventListener('click',clearAttachment);
 $('#ppt-actions').addEventListener('click',event=>{const question=event.target.dataset.pptQuestion;if(question&&(attachedFile||documentContext)&&!busy){$('#command').value=question;$('#command-form').requestSubmit();}});
 $('#close-output').addEventListener('click',()=>setWorkspaceView('dashboard'));
+$('#conversation-history').addEventListener('click',async()=>{if(busy)return;try{const data=await request('/conversations');transcript.replaceChildren();for(const item of data.conversations||[]){const button=document.createElement('button');button.className='task-row';button.textContent=new Date(item.updated_at||item.started_at).toLocaleString()+' · '+item.message_count+' messages';button.addEventListener('click',async()=>{const restored=await request('/conversations/'+encodeURIComponent(item.id)+'/restore',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});transcript.replaceChildren();count=0;for(const entry of restored.messages||[]){if(entry.role==='user'||entry.role==='assistant')message(entry.content,entry.role==='user');}$('#voice-hint').textContent='Conversation restored.';});transcript.append(button);}if(!data.conversations?.length)transcript.textContent='No saved conversations yet.';}catch(error){transcript.textContent=error.message;}});
 let dragDepth=0;
 window.addEventListener('dragenter',event=>{if(event.dataTransfer?.types?.includes('Files')){event.preventDefault();dragDepth++;document.body.classList.add('dragging');}});
 window.addEventListener('dragover',event=>{if(event.dataTransfer?.types?.includes('Files'))event.preventDefault();});
 window.addEventListener('dragleave',()=>{dragDepth=Math.max(0,dragDepth-1);if(!dragDepth)document.body.classList.remove('dragging');});
 window.addEventListener('drop',event=>{event.preventDefault();dragDepth=0;document.body.classList.remove('dragging');const files=event.dataTransfer?.files;if(files?.length){if(files.length>1)$('#voice-hint').textContent='Attached the first dropped file; add files one at a time.';attachUpload(files[0]);}});
 $('#talk-button').addEventListener('click',startMic);$('.face-stage').addEventListener('click',()=>{if(!micEnabled)startMic();});
-$('#stop-voice').addEventListener('click',stopVoice);$('#mute').addEventListener('click',()=>{muted=!muted;$('#mute').setAttribute('aria-pressed',String(muted));$('#mute').textContent=muted?'Unmute':'Mute';if(muted)stopVoice();else unlockAudio();});
+$('#stop-voice').addEventListener('click',()=>{if(busy&&activeRequestController)activeRequestController.abort();else stopVoice();});$('#mute').addEventListener('click',()=>{muted=!muted;$('#mute').setAttribute('aria-pressed',String(muted));$('#mute').textContent=muted?'Unmute':'Mute';if(muted)stopVoice();else unlockAudio();});
 document.addEventListener('keydown',event=>{if(event.code==='Space'&&!['INPUT','TEXTAREA','BUTTON','SUMMARY'].includes(event.target.tagName)){event.preventDefault();startMic();}});
 window.addEventListener('pagehide',()=>{micEnabled=false;stopVoice();releaseMic();if(attachmentPreviewUrl)URL.revokeObjectURL(attachmentPreviewUrl);if(audioContext)audioContext.close();});
 function clock(){$('#clock').textContent=new Date().toLocaleTimeString('en-GB', {timeZone: TIME_ZONE}) + ' UTC+8';}clock();setInterval(clock,1000);refresh();runtime();setInterval(refresh,10000);setInterval(runtime,10000);setInterval(pollActivity,500);paint();if(recognition)setTimeout(beginWakeListening,350);

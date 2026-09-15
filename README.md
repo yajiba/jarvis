@@ -1,5 +1,12 @@
 # Jean v2.0: Automation, Vision, and Computer Control
 
+The visible assistant identity is configured once and shared by the model and
+dashboard:
+
+```env
+ASSISTANT_NAME=Jean
+```
+
 local memory, web intelligence, push-to-talk input, Piper speech output, and
 wake-word detection. Phase 10 combines these capabilities into one voice-agent
 loop while keeping model inference local.
@@ -21,6 +28,8 @@ and lightweight conversation, the coding model handles code-related requests,
 the document model analyzes dashboard uploads, and the vision model handles
 images. Every specialized role is optional. Reusing the same model name across
 roles avoids unnecessary model swapping on machines with limited VRAM.
+Ollama timing metadata is shown after responses, including the selected model
+and generation speed. Models remain warm for 30 minutes to reduce reload time.
 
 ## Full voice agent
 
@@ -66,6 +75,9 @@ Search my local knowledge for the attendance workflow.
 Retrieval is bounded and local; no cloud embeddings or external document service
 is required.
 
+Saved conversations can be listed and restored from the dashboard History
+control. Restored context is bounded before it is sent back to the model.
+
 ## Dashboard
 
 Install the optional dashboard dependencies:
@@ -79,6 +91,8 @@ Open `http://127.0.0.1:8765`. The dashboard exposes local health/status,
 memory, tasks, automation, vision, approval, and chat controls and does not bind
 beyond localhost. Its animated avatar blinks and uses speech volume to select
 mouth poses from the supplied avatar artwork.
+Chat responses stream to the dashboard as they are generated. Aborting the
+browser request cancels the active stream and releases the chat worker.
 
 ## Scheduled tasks
 
@@ -137,6 +151,17 @@ text for 30 minutes of inactivity. Follow-up requests such as `Explain slide 8`,
 `Create a five-question quiz`, or `Turn this into study notes` reuse that context
 without uploading the file again. Remove the attachment badge to return to normal
 chat. The context is never persisted to disk and is discarded on server restart.
+Topic-specific PowerPoint follow-ups retrieve the most relevant slides; explicit
+requests such as `Explain slide 8` send only the requested slide.
+
+For higher-quality general search, optionally configure a public or privately
+hosted HTTPS SearXNG instance:
+
+```env
+JARVIS_SEARCH_URL=https://search.example.com
+```
+
+Without it, Jean uses relevance-checked Bing RSS with Google News fallback.
 The right-hand workspace previews attached images and documents, then displays
 the completed analysis. Selecting Tasks in the sidebar opens task management in
 the same full workspace; Home returns to the dashboard cards.
@@ -294,8 +319,8 @@ separated list of existing absolute directories:
 JARVIS_ALLOWED_ROOTS=D:\Projects\sentrixv1;D:\Projects\another-project
 ```
 
-The JARVIS folder is always included. Use `list_allowed_roots` to see the
-active boundary, then provide absolute paths when asking JARVIS to inspect an
+The application folder is always included. Use `list_allowed_roots` to see the
+active boundary, then provide absolute paths when asking Jean to inspect an
 external project. Hidden paths, credential files, symlink escapes, and
 arbitrary shell commands remain blocked.
 
@@ -321,7 +346,11 @@ JARVIS_WAKEWORD_COMMAND_SECONDS=6
 ```
 
 Raise the threshold if false detections occur; lower it if the wake word is
-missed. Wake-word mode is opt-in through `/wake` and is not active at startup.
+missed. The dashboard recognizes “Hey Jean” through browser speech recognition.
+Terminal wake mode continues using `hey_jarvis` until a trained openWakeWord
+model for “Hey Jean” is supplied through `JARVIS_WAKEWORD_MODEL`; changing the
+name alone does not create an acoustic model. Wake-word mode is opt-in through
+`/wake` and is not active at startup.
 
 ## Tools and memory
 

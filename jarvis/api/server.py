@@ -3,11 +3,13 @@
 from pathlib import Path
 from typing import Any
 from threading import Lock
+from threading import Event, Thread
 from urllib.request import urlopen
 from urllib.parse import unquote
 import json
 import time
 import uuid
+import asyncio
 from contextlib import asynccontextmanager
 
 from jarvis.memory import MemoryStore
@@ -17,7 +19,7 @@ def create_app(agent: Any, memory: MemoryStore, settings: Any = None, tools: Any
                scheduler=None, automation=None, approvals=None, vision=None, document_client=None):
     try:
         from fastapi import FastAPI, HTTPException, Request
-        from fastapi.responses import FileResponse, Response
+        from fastapi.responses import FileResponse, Response, StreamingResponse
         from fastapi.staticfiles import StaticFiles
     except ImportError as error:
         raise RuntimeError(
@@ -87,19 +89,26 @@ def create_app(agent: Any, memory: MemoryStore, settings: Any = None, tools: Any
     def runtime():
         connection = "offline"
         model = getattr(settings, "model", None)
+        installed = set()
         try:
             host = getattr(settings, "ollama_host", "http://127.0.0.1:11434")
             with urlopen(f"{host}/api/tags", timeout=2) as response:
-                models = json.load(response).get("models", [])
-            connection = "ready" if any(item.get("name") == model for item in models) else "model missing"
+            models = json.load(response).get("models", [])
+            installed = {item.get('name') for item in models if isinstance(item, dict)}
+            connection = "ready" if model in installed else "model missing"
         except (OSError, ValueError, TypeError):
             pass
+        roles = {"general": model,
+                 "fast": getattr(settings, 'fast_model', None),
+                 "coding": getattr(settings, 'coding_model', None),
+                 "document": getattr(settings, 'document_model', None),
+                 "vision": getattr(settings, 'vision_model', None)}
         return {"connection": connection, "model": model,
-                "models": {"general": model,
-                           "fast": getattr(settings, 'fast_model', None),
-                           "coding": getattr(settings, 'coding_model', None),
-                           "document": getattr(settings, 'document_model', None),
-                           "vision": getattr(settings, 'vision_model', None)},
+                "assistant_name": getattr(settings, 'assistant_name', 'Jean'),
+                "models": roles,
+                "model_status": {role: ('disabled' if not name else
+                                         'installed' if name in installed else 'missing')
+                                 for role, name in roles.items()},
                 "voice": model_path.stem, "engine": "Piper",
                 "voice_enabled": bool(getattr(settings, "tts_enabled", False)),
                 "timeout_seconds": float(getattr(settings, "timeout_seconds", 120.0))}
@@ -126,6 +135,7 @@ def create_app(agent: Any, memory: MemoryStore, settings: Any = None, tools: Any
         hardware = tools.execute("get_hardware_info", {}).get("result", {}) if tools else {}
         return {
             "status": "online",
+            "assistant_name": getattr(settings, 'assistant_name', 'Jean'),
             "model": getattr(settings, "model", None),
             "models": {role: getattr(settings, attribute, None) for role, attribute in {
                 'general': 'model', 'fast': 'fast_model', 'coding': 'coding_model',
@@ -145,6 +155,23 @@ def create_app(agent: Any, memory: MemoryStore, settings: Any = None, tools: Any
             "memories": memory.list_memories(),
             "tasks": memory.list_tasks(),
         }
+
+    @app.get('/conversations')
+    def conversations():
+        return {'conversations': memory.list_conversations()}
+
+    @app.post('/conversations/{conversation_id}/restore')
+    def restore_conversation(conversation_id: str):
+        if not chat_lock.acquire(blocking=False):
+            raise HTTPException(status_code=409, detail='Jean is handling another message. Please wait.')
+        try:
+            messages = memory.conversation_messages(conversation_id)
+            agent.restore(conversation_id, messages)
+            return {'conversation_id': conversation_id, 'messages': messages}
+        except ValueError as error:
+            raise HTTPException(status_code=404, detail=str(error)) from error
+        finally:
+            chat_lock.release()
 
     @app.get("/tasks")
     def get_tasks() -> list[dict[str, Any]]:
@@ -182,7 +209,64 @@ def create_app(agent: Any, memory: MemoryStore, settings: Any = None, tools: Any
         finally:
             activity["state"] = "Ready"
             chat_lock.release()
-        return {"response": response}
+        diagnostics = getattr(agent, 'diagnostics', {})
+        result = {"response": response}
+        if isinstance(diagnostics, dict):
+            result['diagnostics'] = diagnostics
+        return result
+
+    @app.post('/chat-stream')
+    async def chat_stream(request: Request):
+        try:
+            payload = await request.json()
+        except (ValueError, TypeError) as error:
+            raise HTTPException(status_code=400, detail='A JSON message is required') from error
+        message = payload.get('message') if isinstance(payload, dict) else None
+        if not isinstance(message, str) or not message.strip():
+            raise HTTPException(status_code=400, detail='message must be a nonempty string')
+        if not chat_lock.acquire(blocking=False):
+            raise HTTPException(status_code=409, detail='Jean is handling another message. Please wait.')
+        loop = asyncio.get_running_loop()
+        events = asyncio.Queue()
+        cancelled = Event()
+
+        def emit(kind, **values):
+            if not loop.is_closed():
+                loop.call_soon_threadsafe(events.put_nowait, {'type': kind, **values})
+
+        def worker():
+            try:
+                activity['state'] = 'Thinking'
+                def token(value):
+                    if cancelled.is_set():
+                        raise RuntimeError('Generation cancelled')
+                    emit('token', value=value)
+                response = agent.respond_stream(message, token)
+                emit('done', response=response, diagnostics=getattr(agent, 'diagnostics', {}))
+            except Exception as error:
+                emit('error', error=str(error))
+            finally:
+                activity['state'] = 'Ready'
+                chat_lock.release()
+
+        Thread(target=worker, name='jean-chat-stream', daemon=True).start()
+
+        async def stream():
+            try:
+                while True:
+                    try:
+                        event = await asyncio.wait_for(events.get(), timeout=.25)
+                    except asyncio.TimeoutError:
+                        if await request.is_disconnected():
+                            break
+                        continue
+                    yield json.dumps(event, ensure_ascii=False) + '\n'
+                    if event['type'] in {'done', 'error'}:
+                        break
+            finally:
+                cancelled.set()
+        return StreamingResponse(stream(), media_type='application/x-ndjson',
+                                 headers={'Cache-Control':'no-store', 'X-Accel-Buffering':'no'})
 
     @app.post('/analyze-upload')
     async def analyze_upload(request: Request):
@@ -276,6 +360,7 @@ def main() -> None:
     from jarvis.brain import Agent
     from jarvis.brain.llm import OllamaClient
     from jarvis.config import Settings
+    from jarvis.prompts import system_prompt
 
     settings = Settings.from_environment()
     from jarvis.tools import create_local_tools
@@ -297,7 +382,8 @@ def main() -> None:
     from jarvis.tools.presentations import Presentations
     presentations = Presentations((root, *settings.allowed_roots))
     tools = create_local_tools(root, projects=projects, memory=memory,
-                               web=WebClient(enabled=settings.web_enabled),
+                               web=WebClient(enabled=settings.web_enabled,
+                                             search_url=settings.search_url),
                                allowed_roots=settings.allowed_roots, knowledge=knowledge,
                                automation=automation,
                                vision=vision, presentations=presentations,
@@ -312,7 +398,8 @@ def main() -> None:
                                     settings.timeout_seconds)
                        if settings.document_model else None)
     agent = Agent(OllamaClient(settings.ollama_host, settings.model, settings.timeout_seconds),
-                  coding_client=coding_client, fast_client=fast_client, tools=tools, memory=memory)
+                  coding_client=coding_client, fast_client=fast_client,
+                  system_prompt=system_prompt(settings.assistant_name), tools=tools, memory=memory)
     try:
         scheduler = TaskScheduler(memory, lambda task: print('Jean reminder: ' + task['title']), automation=automation)
         uvicorn.run(create_app(agent, memory, settings, tools, scheduler, automation, approvals,

@@ -53,6 +53,17 @@ class MemoryStoreTests(unittest.TestCase):
         self.assertTrue(saved["ok"])
         self.assertEqual(result, {"ok": True, "result": {"key": "editor", "value": "VS Code"}})
 
+    def test_conversations_can_be_listed_and_restored(self) -> None:
+        with MemoryStore(self.path) as memory:
+            conversation_id = memory.start_conversation()
+            memory.add_message(conversation_id, 'user', 'Remember this discussion')
+            memory.add_message(conversation_id, 'assistant', 'I remember it')
+            conversations = memory.list_conversations()
+            messages = memory.conversation_messages(conversation_id)
+        self.assertEqual(conversations[0]['id'], conversation_id)
+        self.assertEqual(conversations[0]['message_count'], 2)
+        self.assertEqual([item['role'] for item in messages], ['user', 'assistant'])
+
 
 if __name__ == "__main__":
     unittest.main()

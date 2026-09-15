@@ -21,6 +21,7 @@ from jarvis.rag import KnowledgeStore
 from jarvis.scheduler import TaskScheduler
 from jarvis.scheduler.automation import Automation
 from jarvis.tools.vision import Vision
+from jarvis.prompts import system_prompt
 
 
 def confirm_action(name: str, details: dict) -> bool:
@@ -160,12 +161,13 @@ def run_session(settings, root, projects, memory, knowledge) -> None:
     from jarvis.tools.presentations import Presentations
     presentations = Presentations((root, *settings.allowed_roots))
     tools = create_local_tools(root, confirm=confirm, projects=projects, memory=memory,
-                               web=WebClient(enabled=settings.web_enabled),
+                               web=WebClient(enabled=settings.web_enabled,
+                                             search_url=settings.search_url),
                                allowed_roots=settings.allowed_roots,
                                knowledge=knowledge, automation=automation, vision=vision,
                                presentations=presentations)
     agent = Agent(client, coding_client=coding_client, fast_client=fast_client,
-                  tools=tools, memory=memory)
+                  system_prompt=system_prompt(settings.assistant_name), tools=tools, memory=memory)
     scheduler = TaskScheduler(memory, lambda task: print(f"\nJean reminder: {task['title']}"), automation=automation)
     scheduler.start()
 

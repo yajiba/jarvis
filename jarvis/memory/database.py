@@ -117,6 +117,29 @@ class MemoryStore:
         self._connection.commit()
 
     @synchronized
+    def list_conversations(self, limit: int = 20) -> list[dict[str, Any]]:
+        limit = max(1, min(int(limit), 100))
+        rows = self._connection.execute(
+            "SELECT c.id, c.started_at, COUNT(m.id) AS message_count, "
+            "MAX(m.created_at) AS updated_at FROM conversations c "
+            "LEFT JOIN conversation_messages m ON m.conversation_id=c.id "
+            "GROUP BY c.id ORDER BY COALESCE(MAX(m.id), 0) DESC LIMIT ?", (limit,)
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+    @synchronized
+    def conversation_messages(self, conversation_id: str) -> list[dict[str, Any]]:
+        row = self._connection.execute(
+            "SELECT id FROM conversations WHERE id=?", (conversation_id,)).fetchone()
+        if row is None:
+            raise ValueError('Conversation was not found')
+        rows = self._connection.execute(
+            "SELECT role, content, tool_name, created_at FROM conversation_messages "
+            "WHERE conversation_id=? ORDER BY id LIMIT 500", (conversation_id,)
+        ).fetchall()
+        return [dict(item) for item in rows]
+
+    @synchronized
     def remember(self, content: str, category: str = "fact") -> int:
         if not content.strip() or not category.strip():
             raise ValueError("Memory content and category are required")

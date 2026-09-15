@@ -39,6 +39,7 @@ class Agent:
         self.max_context_characters = max_context_characters
         self._messages: list[dict] = []
         self.on_activity: Callable[[str], None] = lambda activity: None
+        self._last_client = client
         self.reset()
 
     @property
@@ -51,6 +52,20 @@ class Agent:
         self._messages = [{"role": "system", "content": self.system_prompt}]
         if self.memory is not None:
             self.conversation_id = self.memory.start_conversation()
+
+    def restore(self, conversation_id: str, messages: list[dict]) -> None:
+        """Restore persisted chat context while excluding internal timestamps."""
+        restored = []
+        for message in messages:
+            role = message.get('role')
+            content = message.get('content')
+            if role not in {'user', 'assistant'} or not isinstance(content, str):
+                continue
+            item = {'role': role, 'content': content}
+            restored.append(item)
+        self._messages = self._bounded_context(
+            [{'role': 'system', 'content': self.system_prompt}, *restored])
+        self.conversation_id = conversation_id
 
     def respond_stream(
         self,
@@ -67,6 +82,7 @@ class Agent:
         if self.memory is not None and self.conversation_id is not None:
             self.memory.add_message(self.conversation_id, "user", cleaned_input)
         client = self._client_for(cleaned_input)
+        self._last_client = client
         # Lightweight fast-model requests never need the full tool schema.
         if self.tools is not None and client is not self.fast_client:
             return self._respond_with_tools(pending_messages, on_token, client)
@@ -75,6 +91,11 @@ class Agent:
         if self.memory is not None and self.conversation_id is not None:
             self.memory.add_message(self.conversation_id, "assistant", response)
         return response
+
+    @property
+    def diagnostics(self) -> dict:
+        return {'model': getattr(self._last_client, 'model', None),
+                'metrics': deepcopy(getattr(self._last_client, 'last_metrics', {}))}
 
     def _bounded_context(self, messages: list[dict]) -> list[dict]:
         """Keep recent complete user turns within the local model's practical budget."""

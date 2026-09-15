@@ -123,6 +123,27 @@ class WebToolTests(unittest.TestCase):
         self.assertEqual(result['results'][0]['url'], 'https://example.com/python')
         self.assertEqual(self.transport.get.call_count, 2)
 
+    def test_configured_searxng_search_is_used(self):
+        self.transport.get.return_value = document(json.dumps({'results': [{
+            'title':'Official documentation', 'url':'https://example.com/docs',
+            'content':'Primary documentation result'}]}), 'application/json',
+            'https://search.example.com/search?q=docs&format=json')
+        web = WebClient(self.transport, search_url='https://search.example.com')
+        result = web.web_search('docs')
+        self.assertEqual(result['provider'], 'SearXNG')
+        self.assertEqual(result['results'][0]['title'], 'Official documentation')
+
+    def test_repeated_searches_use_short_lived_cache(self):
+        self.transport.get.return_value = document('''<rss><channel><item>
+            <title>Python documentation</title><link>https://example.com/python</link>
+            <description>Python language reference</description></item></channel></rss>''',
+            'application/rss+xml')
+        first = self.web.web_search('Python docs')
+        second = self.web.web_search('Python docs')
+        self.assertNotIn('cached', first)
+        self.assertTrue(second['cached'])
+        self.transport.get.assert_called_once()
+
     def test_page_extraction_removes_scripts_and_caps_output(self):
         self.transport.get.return_value = document('<title>Docs</title><script>bad()</script><p>' + 'x' * 17000 + '</p>')
         result = self.web.read_web('https://example.com/')

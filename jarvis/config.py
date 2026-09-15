@@ -30,6 +30,7 @@ def _read_env(path: Path) -> dict[str, str]:
 
 @dataclass(frozen=True)
 class Settings:
+    assistant_name: str = "Jean"
     ollama_host: str = "http://127.0.0.1:11434"
     model: str = "qwen3:8b"
     fast_model: str | None = None
@@ -48,6 +49,7 @@ class Settings:
     wakeword_threshold: float = 0.5
     wakeword_command_seconds: float = 6.0
     web_enabled: bool = True
+    search_url: str | None = None
     voice_agent_enabled: bool = False
     rag_semantic_enabled: bool = False
     allowed_roots: tuple[Path, ...] = ()
@@ -97,6 +99,21 @@ class Settings:
         if not valid:
             raise ValueError("OLLAMA_HOST must be a valid HTTP or HTTPS URL")
 
+        assistant_name = values.get('ASSISTANT_NAME', cls.assistant_name).strip()
+        if not assistant_name or len(assistant_name) > 40 or not assistant_name.replace(' ', '').isalpha():
+            raise ValueError('ASSISTANT_NAME must contain 1 to 40 letters and spaces')
+        search_url = values.get('JARVIS_SEARCH_URL', '').strip().rstrip('/') or None
+        if search_url:
+            try:
+                search = urlsplit(search_url)
+                valid_search = (search.scheme == 'https' and bool(search.hostname)
+                                and search.username is None and search.password is None
+                                and not search.query and not search.fragment)
+            except ValueError:
+                valid_search = False
+            if not valid_search:
+                raise ValueError('JARVIS_SEARCH_URL must be a credential-free HTTPS URL')
+
         web_enabled = boolean('JARVIS_WEB_ENABLED', True)
         allowed_roots: list[Path] = []
         gui_enabled = boolean('JARVIS_GUI_ENABLED', False)
@@ -113,6 +130,7 @@ class Settings:
                 raise ValueError(f'JARVIS_ALLOWED_ROOTS directory is unavailable: {allowed_root}')
             allowed_roots.append(allowed_root)
         return cls(
+            assistant_name=assistant_name,
             ollama_host=host,
             model=values.get("JARVIS_MODEL", cls.model),
             fast_model=values.get('JARVIS_FAST_MODEL') or None,
@@ -131,6 +149,7 @@ class Settings:
             wakeword_threshold=wakeword_threshold,
             wakeword_command_seconds=command_seconds,
             web_enabled=web_enabled,
+            search_url=search_url,
             voice_agent_enabled=boolean('JARVIS_VOICE_AGENT_ENABLED', False),
             rag_semantic_enabled=boolean('JARVIS_RAG_SEMANTIC_ENABLED', False),
             allowed_roots=tuple(dict.fromkeys(allowed_roots)),

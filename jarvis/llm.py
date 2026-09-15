@@ -1,6 +1,7 @@
 """Small Ollama client for the Phase 1 chat loop."""
 
 import json
+from threading import Lock
 from collections.abc import Callable, Iterable
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -40,6 +41,19 @@ class OllamaClient:
         self.timeout_seconds = timeout_seconds
         self.keep_alive = keep_alive
         self._request_fn = request_fn or urlopen
+        self._metrics_lock = Lock()
+        self.last_metrics: dict[str, float | int] = {}
+
+    def _capture_metrics(self, payload: dict) -> None:
+        metrics = {key: payload[key] for key in (
+            'total_duration', 'load_duration', 'prompt_eval_count',
+            'prompt_eval_duration', 'eval_count', 'eval_duration')
+                   if isinstance(payload.get(key), (int, float))}
+        duration = metrics.get('eval_duration', 0)
+        if duration and metrics.get('eval_count'):
+            metrics['tokens_per_second'] = round(metrics['eval_count'] / (duration / 1_000_000_000), 2)
+        with self._metrics_lock:
+            self.last_metrics = metrics
 
     def chat(self, messages: list[dict[str, str]]) -> str:
         request = self._build_request(messages, stream=False)
@@ -48,6 +62,7 @@ class OllamaClient:
             response = self._request_fn(request, timeout=self.timeout_seconds)
             with response:
                 response_data = json.loads(response.read().decode("utf-8"))
+            self._capture_metrics(response_data)
         except HTTPError as error:
             detail = error.read().decode("utf-8", errors="replace")
             raise OllamaError(f"Ollama returned HTTP {error.code}: {detail}") from error
@@ -108,6 +123,7 @@ class OllamaClient:
                         response_text.append(token)
                         on_token(token)
                     if response_data.get("done") is True:
+                        self._capture_metrics(response_data)
                         completed = True
                         break
         except HTTPError as error:

@@ -149,6 +149,18 @@ class DashboardTests(unittest.TestCase):
             analyze_prepared_document(client, prepared, 'Review slide 3')
         client.chat.assert_not_called()
 
+    def test_topic_follow_up_retrieves_only_relevant_slides(self) -> None:
+        from jarvis.api.uploads import analyze_prepared_document
+        client = Mock(host='http://127.0.0.1:11434', model='document-test')
+        client.chat.return_value = 'Topic explained.'
+        prepared = {'filename':'lesson.pptx', 'slide_count':3, 'content_truncated':False,
+                    'text':'Slide 1: History\n\nSlide 2: Photosynthesis uses chlorophyll\n\nSlide 3: Algebra'}
+        analyze_prepared_document(client, prepared, 'Explain chlorophyll')
+        prompt = client.chat.call_args.args[0][1]['content']
+        self.assertIn('Slide 2:', prompt)
+        self.assertNotIn('Slide 1:', prompt)
+        self.assertNotIn('Slide 3:', prompt)
+
     def test_dashboard_rejects_malformed_powerpoint_cleanly(self) -> None:
         from fastapi.testclient import TestClient
         with TemporaryDirectory() as directory, MemoryStore(Path(directory) / 'jarvis.db') as memory:
@@ -237,6 +249,41 @@ class DashboardTests(unittest.TestCase):
             payload = route.endpoint()
             self.assertIn("hardware", payload)
             self.assertIn("voice_ready", payload)
+
+    def test_chat_stream_emits_tokens_and_completion(self) -> None:
+        from fastapi.testclient import TestClient
+        class StreamingAgent:
+            messages = []
+            diagnostics = {'model':'test', 'metrics':{'tokens_per_second':12.5}}
+            on_activity = None
+            def respond_stream(self, text, callback):
+                callback('Hello')
+                callback(' Jean')
+                return 'Hello Jean'
+        with TemporaryDirectory() as directory, MemoryStore(Path(directory) / 'jarvis.db') as memory:
+            with TestClient(create_app(StreamingAgent(), memory)) as client:
+                response = client.post('/chat-stream', json={'message':'Hello'})
+        events = [__import__('json').loads(line) for line in response.text.splitlines()]
+        self.assertEqual([event['type'] for event in events], ['token','token','done'])
+        self.assertEqual(events[-1]['diagnostics']['model'], 'test')
+
+    def test_dashboard_can_restore_a_saved_conversation(self) -> None:
+        from fastapi.testclient import TestClient
+        from jarvis.brain import Agent
+        class Client:
+            def chat_stream(self, messages, callback):
+                return 'unused'
+        with TemporaryDirectory() as directory, MemoryStore(Path(directory) / 'jarvis.db') as memory:
+            conversation_id = memory.start_conversation()
+            memory.add_message(conversation_id, 'user', 'Saved question')
+            memory.add_message(conversation_id, 'assistant', 'Saved answer')
+            agent = Agent(Client())
+            with TestClient(create_app(agent, memory)) as client:
+                listed = client.get('/conversations').json()['conversations']
+                restored = client.post(f'/conversations/{conversation_id}/restore', json={})
+        self.assertTrue(any(item['id'] == conversation_id for item in listed))
+        self.assertEqual(restored.status_code, 200)
+        self.assertEqual(agent.conversation_id, conversation_id)
 
 
 if __name__ == "__main__":
